@@ -759,12 +759,17 @@ server <- function(input, output, session) {
       ))
     }
 
-    # otherwise: top‑5 peak table (ensure atomic cols only)
-    tab <- hplcAnalyzer::filter_top_peaks(ar$peak_table, min_rt = 6, top_n = 5)
+    # otherwise: top‑10 peak table (ensure atomic cols only)
+    tab <- hplcAnalyzer::filter_top_peaks(ar$peak_table, min_rt = 6, top_n = 10)
     if (!is.data.frame(tab) || nrow(tab) == 0) {
       return(data.frame(Metric = "No peaks ≥ 6 min", Value = NA_character_, check.names = FALSE))
     }
 
+    # Area (%) is each peak against the sum of THESE peaks, not every peak the
+    # detector found. On a 280 nm trace the detector reports dozens of sub-mAU
+    # baseline features, and dividing by all of them drags a >95 percent pure
+    # peptide down to about 59 percent. The top ten are the main peak plus the
+    # nine largest impurities, which is the population a purity number is about.
     conc_raw   <- calc_conc_vec(tab$area, eps, inj_ml)
     conc_final <- conc_raw * df
     eps_col    <- sprintf("ε%d (M⁻¹ cm⁻¹)", wl)
@@ -773,6 +778,7 @@ server <- function(input, output, session) {
       `RT (min)`            = round(tab$apex_rt, 2),
       `Height (mAU)`        = round(tab$height, 1),
       `Area (mAU·min)`      = round(tab$area, 2),
+      `Area (%)`            = round(100 * tab$area / sum(tab$area, na.rm = TRUE), 2),
       `Conc raw (µM)`       = format_conc_or_reason(conc_raw,   eps),
       `Conc final (µM)`     = format_conc_or_reason(conc_final, eps),
       `epsilon (M⁻¹ cm⁻¹)`  = rep(ifelse(is.na(eps), NA_real_, round(eps, 0)), nrow(tab)),
