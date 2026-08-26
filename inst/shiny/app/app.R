@@ -19,6 +19,7 @@ ui <- fluidPage(
       shinyDirButton("dir", "Choose folder directory (Agilent .D or Thermo export", "Browse..."),
       verbatimTextOutput("selectedDir"),
       fileInput("mapfile", "Optional CSV map (Thermo: Well→Sequence; Agilent: MRMP→Sequence)", accept = ".csv"),
+      downloadButton("downloadSeqTemplate", "Download CSV map template"),
 
       radioButtons(
         "wavelength",
@@ -165,14 +166,32 @@ server <- function(input, output, session) {
     toupper(gsub("_", "-", id))   # normalize
   }
 
+  # Pull a plate well like "P1-C1" out of a Thermo export filename, inserting the hyphen
+  # when the exporter wrote the run as "P1C1".
+  extract_well_id <- function(x) {
+    well <- regmatches(x, regexpr("P[0-9]+[-]?[A-H][0-9]+", x, ignore.case = TRUE))
+    if (!length(well) || !nzchar(well)) return(NA_character_)
+    sub("^(P[0-9]+)([A-H][0-9]+)$", "\\1-\\2", well, ignore.case = TRUE)
+  }
+
   # -- Lookup sequence from uploaded CSV; warn on every fallback
-  sequence_from_map <- function(fname, map_df, notify = TRUE, persist = 6) {
-    n <- basename(fname)
+  sequence_from_map <- function(sample_path, map_df, notify = TRUE, persist = 6) {
+    n <- basename(sample_path)
     notify_fb <- function(reason) {
       if (notify) shiny::showNotification(
         paste0("Fallback to filename mapping for ", n, " – ", reason),
         type = "warning", duration = persist
       )
+    }
+
+    # Resolution order once the uploaded CSV has not answered: the sample name ChemStation
+    # stored in SAMPLE.XML, then the truncated folder name. The XML name is never shorter
+    # than the folder name, but ChemStation caps it at 40 characters, which is exactly why
+    # an explicit CSV entry still has to win over it.
+    agilent_sequence_below_csv <- function() {
+      from_sample_xml <- hplcAnalyzer::peptide_sequence_from_sample_xml(sample_path)
+      if (!is.na(from_sample_xml)) return(from_sample_xml)
+      hplcAnalyzer::extract_sequence(n, map_df)
     }
 
     # THERMO (.txt) — Well -> Sequence
@@ -188,9 +207,8 @@ server <- function(input, output, session) {
         notify_fb("CSV missing Well and/or Sequence column(s).")
         return(hplcAnalyzer::extract_sequence(n, map_df))
       }
-      well <- regmatches(n, regexpr("P[0-9]+[-]?[A-H][0-9]+", n, ignore.case = TRUE))
-      well <- sub("^(P[0-9]+)([A-H][0-9]+)$", "\\1-\\2", well, ignore.case = TRUE)
-      if (!length(well) || !nzchar(well)) {
+      well <- extract_well_id(n)
+      if (is.na(well)) {
         notify_fb("could not parse Well from filename.")
         return(hplcAnalyzer::extract_sequence(n, map_df))
       }
@@ -206,25 +224,25 @@ server <- function(input, output, session) {
     if (grepl("\\.D$", n, ignore.case = TRUE)) {
       if (is.null(map_df)) {
         notify_fb("no CSV loaded (Agilent/MRMP).")
-        return(hplcAnalyzer::extract_sequence(n, map_df))
+        return(agilent_sequence_below_csv())
       }
       mrmp_col <- grep("mrmp", names(map_df), ignore.case = TRUE, value = TRUE)[1]
       seq_col  <- grep("pept.*seq|peptide.*sequence|sequence",
                        names(map_df), ignore.case = TRUE, value = TRUE)[1]
       if (is.na(mrmp_col) || is.na(seq_col)) {
         notify_fb("CSV missing MRMP and/or Sequence column(s).")
-        return(hplcAnalyzer::extract_sequence(n, map_df))
+        return(agilent_sequence_below_csv())
       }
       key <- extract_mrmp_id(n)
       if (is.na(key)) {
         notify_fb("could not parse MRMP id from filename.")
-        return(hplcAnalyzer::extract_sequence(n, map_df))
+        return(agilent_sequence_below_csv())
       }
       keys <- toupper(gsub("_", "-", trimws(as.character(map_df[[mrmp_col]]))))
       idx  <- which(keys == key)
       if (!length(idx)) {
         notify_fb(paste0("MRMP id ", key, " not found in CSV."))
-        return(hplcAnalyzer::extract_sequence(n, map_df))
+        return(agilent_sequence_below_csv())
       }
       return(map_df[[seq_col]][idx[1]])
     }
@@ -232,6 +250,27 @@ server <- function(input, output, session) {
     # Unknown file type
     notify_fb("unknown file type for mapping.")
     hplcAnalyzer::extract_sequence(n, map_df)
+  }
+
+  # A starting point for the CSV the user uploads, so the sequences only have to be
+  # corrected rather than typed from scratch. Sequence is pre-filled with whatever the app
+  # resolved on its own, which makes re-uploading an untouched template a no-op. Both key
+  # columns are always written because the CSV is keyed on the MRMP id for Agilent .D runs
+  # and on the plate well for Thermo exports, and one template has to serve both.
+  sequence_map_template <- function(sample_paths, map_df) {
+    resolved_sequence <- function(sample_path) {
+      seq_one <- sequence_from_map(sample_path, map_df, notify = FALSE)
+      if (is.null(seq_one) || length(seq_one) != 1L || is.na(seq_one)) return(NA_character_)
+      as.character(seq_one)
+    }
+    data.frame(
+      MRMP      = vapply(basename(sample_paths), extract_mrmp_id, character(1)),
+      Well      = vapply(basename(sample_paths), extract_well_id, character(1)),
+      Sequence  = vapply(sample_paths, resolved_sequence, character(1)),
+      Run       = basename(sample_paths),
+      stringsAsFactors = FALSE,
+      row.names        = NULL
+    )
   }
 
 
@@ -289,7 +328,7 @@ server <- function(input, output, session) {
         # }
 
         # 1) figure out peptide sequence (Thermo well OR Agilent MRMP via uploaded CSV)
-        seq_sp <- sequence_from_map(fn, m)
+        seq_sp <- sequence_from_map(sp, m)
 
 
         # 2) pick blank for .D only
@@ -413,8 +452,7 @@ server <- function(input, output, session) {
 
 
   seq_used <- reactive({
-    fname <- basename(current_sample())
-    sequence_from_map(fname, seq_map())
+    sequence_from_map(current_sample(), seq_map())
   })
 
 
@@ -823,6 +861,17 @@ server <- function(input, output, session) {
     results(res)
   })
 
+
+
+  output$downloadSeqTemplate <- downloadHandler(
+    filename = function() paste0("sequence_map_template_", Sys.Date(), ".csv"),
+    content  = function(file) {
+      # na = "" leaves unknown cells empty rather than writing the text "NA", which the
+      # user would otherwise have to delete before filling the sequence in.
+      write.csv(sequence_map_template(samples(), seq_map()), file,
+                row.names = FALSE, na = "")
+    }
+  )
 
 
   output$downloadResults <- downloadHandler(
