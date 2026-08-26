@@ -36,7 +36,11 @@ estimate_epsilon_214 <- function(sequence) {
 
   aas <- strsplit(sequence, "")[[1]]
   n_pb <- length(aas) - 1
-  cnt  <- table(factor(aas, names(coeffs)))
+  # Proline is deliberately absent from `coeffs` because Kuipers and Gruppen give it
+  # 2675 only when it is NOT N-terminal, which is applied separately below. It must
+  # still be a factor LEVEL here: levels not listed become NA and table() drops them,
+  # so omitting it silently destroyed the count and the 2675 term never fired.
+  cnt  <- table(factor(aas, c(names(coeffs), "P")))
 
   # **Special tripeptide cases** (Table 3) :contentReference[oaicite:11]{index=11}
   # Gly-Gly-Gly, Gly-Pro-Gly, Pro-Gly-Gly, Gly-Gly-Pro

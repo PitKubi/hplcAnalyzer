@@ -24,21 +24,52 @@ RStudio makes working with R easier:
 
 ## Step 3: Install hplcAnalyzer
 
-Open R or RStudio and run these commands:
+hplcAnalyzer is distributed as a source tarball, not from GitHub. You will be sent a
+file named `hplcAnalyzer_<version>.tar.gz`.
+
+### First time
+
+Open R or RStudio and install the dependencies, all from CRAN:
 
 ```r
-# Install devtools (needed to install from GitHub)
-install.packages("devtools")
-
-# Install hplcAnalyzer
-devtools::install_github("yourusername/hplcAnalyzer")
+install.packages(c("chromConverter","dplyr","baseline","signal","pracma",
+                   "ggplot2","gridExtra","shiny","shinyFiles","fs","DT",
+                   "tibble","xml2","magrittr"))
 ```
 
-**Note:** The first time you install, it may take 5-10 minutes to download and install all required packages. This is normal!
+This takes 5 to 10 minutes the first time. Then install the package itself, using the
+full path to the file you were sent:
 
-### If you get a "compilation" warning on Windows:
+```r
+install.packages("C:/path/to/hplcAnalyzer_0.3.0.tar.gz", repos = NULL, type = "source")
+```
 
-If asked "Do you want to install from sources the packages which need compilation?", type `n` (no) and press Enter. Pre-compiled versions work fine.
+### Upgrading from an earlier version
+
+1. Close R and RStudio completely, then reopen. On Windows a loaded package cannot be
+   overwritten, and the install fails quietly if you skip this.
+2. Install any new dependency. Version 0.3.0 added `xml2`:
+   ```r
+   install.packages("xml2")
+   ```
+3. Install the new tarball over the old one, exactly as above. There is no need to
+   uninstall first.
+4. Restart R again.
+
+Check which version you ended up with:
+
+```r
+packageVersion("hplcAnalyzer")
+```
+
+## Step 4: Run the app
+
+```r
+library(hplcAnalyzer)
+run_hplc_app()
+```
+
+The app opens in your browser. Everything runs on your own machine; no data leaves it.
 
 ## Step 4: Launch the App
 

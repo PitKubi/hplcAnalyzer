@@ -12,6 +12,12 @@ arrange     <- dplyr::arrange
 slice_head  <- dplyr::slice_head
 desc        <- dplyr::desc
 
+# Every Agilent run the app has ever quantified used 0.1 mL, because run_hplc_analysis_agilent()
+# defaults to that and the app never passed anything else. Starting the control at the same
+# 100 µL is what makes an untouched sidebar reproduce the numbers the app produced before this
+# input existed. It is also what the instrument actually injects.
+DEFAULT_INJECTION_VOLUME_UL <- 100
+
 ui <- fluidPage(
   titlePanel("HPLC-UV Analyzer"),
   sidebarLayout(
@@ -43,6 +49,14 @@ ui <- fluidPage(
         width = "100%"
       ),
       helpText("Final conc shown = raw conc × dilution factor. e.g. enter 10 for 1:10 dilution."),
+
+      numericInput(
+        "injection_volume_ul",
+        "Injection volume (µL):",
+        value = DEFAULT_INJECTION_VOLUME_UL, min = 0.1, step = 10,
+        width = "100%"
+      ),
+      helpText("Volume injected on column. Concentration scales inversely with it. Applies to Agilent .D runs; Thermo exports carry their own injection volume in the file header."),
 
       actionButton("load", "Load samples"),
       hr(),
@@ -102,6 +116,42 @@ ui <- fluidPage(
   )
 )
 
+
+# The pipeline stamps the injection volume it actually used onto the corrected trace, so every
+# display reads it back from there rather than from the input box and can never disagree with
+# the concentrations next to it.
+injection_volume_ml_used <- function(df_hybrid, fallback_ml) {
+  stamped <- if (is.null(df_hybrid)) NULL else attr(df_hybrid, "inj_vol_ml")
+  if (is.null(stamped) || !is.numeric(stamped) || is.na(stamped)) fallback_ml else stamped
+}
+
+# Why the reason is read off the sequence rather than off the wavelength: ε is NA both when the
+# peptide has no chromophore at the detection wavelength and when no sequence was ever
+# resolved, and naming the wrong one sends the user to fix the wrong thing.
+missing_epsilon_reason <- function(peptide_sequence) {
+  if (is.null(peptide_sequence) || length(peptide_sequence) != 1L ||
+      is.na(peptide_sequence) || !nzchar(peptide_sequence)) {
+    return("no peptide sequence was resolved for this run")
+  }
+  if (!grepl("[WY]", peptide_sequence)) {
+    return(paste0("the peptide ", peptide_sequence, " contains no Trp and no Tyr"))
+  }
+  paste0("no ε could be computed for the sequence ", peptide_sequence)
+}
+
+# Why the chromatogram is withheld rather than drawn without a concentration: with no ε the
+# peaks the detector still reports at this wavelength are sub-mAU baseline features, and drawn
+# on an autoscaled axis they read as signal.
+missing_epsilon_plot <- function(signal_wavelength, peptide_sequence) {
+  ggplot() +
+    annotate(
+      "text", x = 0.5, y = 0.5, size = 4.5, lineheight = 1.5,
+      label = sprintf(
+        "NA (missing ε)\n\nNo extinction coefficient at %g nm:\n%s,\nso no concentration can be calculated.\n\nChromatogram not shown.",
+        signal_wavelength, missing_epsilon_reason(peptide_sequence))
+    ) +
+    theme_void()
+}
 
 empty_results <- function() {
   tibble::tibble(
@@ -312,6 +362,7 @@ server <- function(input, output, session) {
     results(empty_results())
     {
       m <- seq_map()
+      inj_ml <- injection_volume_ml()
       auto_res <- lapply(samples_ls, function(sp) {
         fn <- basename(sp)
         # 1) figure out peptide sequence
@@ -350,6 +401,7 @@ server <- function(input, output, session) {
               use_hybrid              = !is.null(blank_sp),
               min_rt_frac             = input$min_rt_perc/100,
               signal_wavelength       = wl,
+              inj_vol_ml              = inj_ml,
               show_intermediate_plots = FALSE
             )
           } else {
@@ -493,6 +545,14 @@ server <- function(input, output, session) {
     if (!isTRUE(is.finite(df)) || df <= 0) 1 else df
   })
 
+  # Same fallback rule as the dilution factor above. The UI asks for µL because that is the
+  # unit the instrument reports and the unit a chemist types; the pipeline works in mL.
+  injection_volume_ml <- reactive({
+    ul <- suppressWarnings(as.numeric(input$injection_volume_ul))
+    if (!isTRUE(is.finite(ul)) || ul <= 0) ul <- DEFAULT_INJECTION_VOLUME_UL
+    ul / 1000
+  })
+
   ####reactive for sample table
   samples_table <- reactive({
     req(samples())
@@ -573,6 +633,7 @@ server <- function(input, output, session) {
           use_hybrid              = use_hybrid(),
           min_rt_frac             = input$min_rt_perc / 100,
           signal_wavelength       = wl,
+          inj_vol_ml              = injection_volume_ml(),
           show_intermediate_plots = FALSE
         )
 
@@ -639,11 +700,7 @@ server <- function(input, output, session) {
   #header
   output$metricsHeader <- renderText({
     ar <- analysis_res()
-    # default to 100 µL if not available yet
-    inj_ml <- {
-      v <- if (!is.null(ar$df_hybrid)) attr(ar$df_hybrid, "inj_vol_ml") else NA_real_
-      if (is.null(v) || !is.numeric(v) || is.na(v)) 0.100 else v
-    }
+    inj_ml <- injection_volume_ml_used(ar$df_hybrid, injection_volume_ml())
     sprintf("Top peaks — Inj. Vol: %.1f µL", inj_ml * 1000)
   })
 
@@ -658,11 +715,7 @@ server <- function(input, output, session) {
 
     ar <- analysis_res(); req(!is.null(ar$df_hybrid))
 
-    # robust attrs
-    inj_ml <- {
-      v <- attr(ar$df_hybrid, "inj_vol_ml")
-      if (is.null(v) || !is.numeric(v) || is.na(v)) 0.1 else v   # default 1 µL
-    }
+    inj_ml <- injection_volume_ml_used(ar$df_hybrid, injection_volume_ml())
     eps <- ar$epsilon; if (is.null(eps) || !is.finite(eps)) eps <- NA_real_
 
     # vectorized conc (returns plain numeric; no list/names)
@@ -748,9 +801,15 @@ server <- function(input, output, session) {
 
     ar <- analysis_res(); req(!is.null(ar$df_hybrid))
 
+    # Keyed on ε being NA rather than on the wavelength, so a 214 nm run whose sequence never
+    # resolved is caught too. Guarded on there being peaks because the pipeline reports ε as NA
+    # whenever it found none, whatever the sequence, and such a run keeps its own
+    # "No peaks detected" plot instead of being blamed on a missing ε.
+    if (nrow(ar$peak_table) > 0 && is.na(ar$epsilon)) {
+      return(missing_epsilon_plot(as.numeric(input$wavelength), seq_used()))
+    }
 
-    name <- basename(current_sample())
-    br   <- selected_windows()[[name]]
+    br <- selected_windows()[[name]]
 
     if (!is.null(br)) {
       # user has manually selected a window
@@ -808,11 +867,7 @@ server <- function(input, output, session) {
     ar <- analysis_res()
     if (is.null(ar$df_hybrid)) return()
 
-    # read inj vol safely; default 100 µL if missing
-    inj_ml <- {
-      v <- attr(ar$df_hybrid, "inj_vol_ml")
-      if (is.null(v) || !is.numeric(v) || is.na(v)) 0.100 else v
-    }
+    inj_ml <- injection_volume_ml_used(ar$df_hybrid, injection_volume_ml())
     eps <- ar$epsilon; if (is.null(eps) || !is.finite(eps)) eps <- NA_real_
 
     calc_conc_one <- function(area_val, eps, inj_ml) {

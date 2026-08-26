@@ -1,7 +1,9 @@
 Package: hplcAnalyzer
 Type: Package
 Title: Automated HPLC-UV Analysis and peptide concentration estimation
-Version: 0.2.0
+Version: 0.3.0
+Author: Peter Kubiniok
+Maintainer: Peter Kubiniok <peterkubiniok@gmail.com>
 Authors@R: 
     person("Peter", "Kubiniok", email = "peterkubiniok@gmail.com",
            role = c("aut", "cre"))
@@ -24,5 +26,6 @@ Imports:
     fs,
     DT,
     tibble,
-    xml2
+    xml2,
+    magrittr
 RoxygenNote: 7.3.2
