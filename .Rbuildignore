@@ -1,0 +1,9 @@
+^hplcAnalyzer\.Rproj$
+^\.Rproj\.user$
+^README\.md$
+^INSTALL\.md$
+^\.gitignore$
+^peptide-calculator$
+^aaa_hplc_compare$
+^.*\.Rproj$
+^\.git$

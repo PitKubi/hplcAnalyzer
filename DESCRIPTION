@@ -1,0 +1,27 @@
+Package: hplcAnalyzer
+Type: Package
+Title: Automated HPLC-UV Analysis and peptide concentration estimation
+Version: 0.2.0
+Authors@R: 
+    person("Peter", "Kubiniok", email = "peterkubiniok@gmail.com",
+           role = c("aut", "cre"))
+Description: Read Agilent .D folders or thermo UV data exports (.txt), perform baseline correction if needed,
+    detect peaks, compute concentrations, estimate peptide sequence‐specific ε214 (Kuipers & Gruppen, 2007) molar absorbtion constants and  generateplot results.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Imports:
+    chromConverter,
+    dplyr,
+    baseline,
+    signal,
+    pracma,
+    ggplot2,
+    grid,
+    gridExtra,
+    shiny,
+    shinyFiles,
+    fs,
+    DT,
+    tibble
+RoxygenNote: 7.3.2

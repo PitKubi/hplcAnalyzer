@@ -1,0 +1,35 @@
+# R project files
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+# R package build artifacts
+*.o
+*.so
+*.dll
+*.tar.gz
+*.zip
+
+# Documentation
+/doc/
+/Meta/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Editor files
+*~
+.*.swp
+.*.swo
+
+# peptide-calculator: Electron sub-app. Source is tracked, build output is not.
+peptide-calculator/node_modules/
+peptide-calculator/dist/
+peptide-calculator/out/
+
+# Claude session scratch
+.claude/
