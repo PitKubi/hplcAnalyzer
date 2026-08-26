@@ -6,6 +6,7 @@
 #' @param sample_als_lambda Numeric. λ for global ALS baseline. Default 4.0.
 #' @param sample_als_p Numeric. p for global ALS baseline. Default 1e-4.
 #' @param use_hybrid Logical. If TRUE, run hybrid baseline (requires blank). Default FALSE.
+#'   Ignored at signal_wavelength = 280, which always takes the ALS only path.
 #' @param hybrid_als_lambda Numeric. λ for piecewise ALS. Default 6.5.
 #' @param hybrid_als_p Numeric. p for piecewise ALS. Default 1e-4.
 #' @param pre_win Integer. SG window for hybrid pre-smoothing. Default 7.
@@ -53,7 +54,25 @@ run_hplc_analysis_agilent <- function(
   df_sample <- read_hplc_agilent(sample_d_path,
                                  signal_wavelength = signal_wavelength,
                                  signal_ref        = signal_ref)
-  if (use_hybrid && !is.null(blank_d_path)) {
+
+  # 280 nm is never blank subtracted, whatever the caller asked for.
+  # Why: measured over 69 production runs, the gradient baseline drifts
+  # 1.81 mAU/min at 214 nm but only 0.003 mAU/min at 280 nm, and the blank
+  # accounts for under 0.04 percent of any 280 nm peak area (up to 1.5 percent
+  # at 214 nm). There is simply nothing at 280 nm for a blank subtraction to
+  # remove, and it does harm: against hand integrated areas on 8 well resolved
+  # peaks the hybrid path is biased high on every peak (median +6.6 percent, up
+  # to +12.2 percent) while ALS alone stays within +/- 2.6 percent. The hybrid
+  # path also crashed inside baseline_hybrid_sm on 1 of 57 runs at 280 nm and
+  # rescued no real quantitation there (its apparent rescues are all runs with
+  # no 280 nm chromophore, which return NA anyway).
+  # Why this overrides an explicit use_hybrid = TRUE rather than only changing
+  # the default: the Shiny app sets use_hybrid from "a blank folder was found",
+  # which is a fact about the plate layout and not a scientific judgement, so a
+  # default-only change would leave every app run blank subtracting at 280 nm.
+  use_hybrid_baseline <- use_hybrid && signal_wavelength != 280
+
+  if (use_hybrid_baseline && !is.null(blank_d_path)) {
     df_blank <- read_hplc_agilent(blank_d_path,
                                   signal_wavelength = signal_wavelength,
                                   signal_ref        = signal_ref)
@@ -61,7 +80,7 @@ run_hplc_analysis_agilent <- function(
 
   # 2) Baseline correction
   # 2) Baseline correction
-  if (!use_hybrid) {
+  if (!use_hybrid_baseline) {
     df_hybrid <- baseline_als(
       df_sample,
       lambda    = sample_als_lambda,
@@ -104,11 +123,11 @@ run_hplc_analysis_agilent <- function(
     library(ggplot2)
     plt <- ggplot(df_hybrid, aes(
       time,
-      y = if (use_hybrid) corrected else corrected
+      y = corrected
     )) +
       geom_line() +
       labs(
-        title = if (use_hybrid) "Hybrid Baseline" else "ALS Baseline",
+        title = if (use_hybrid_baseline) "Hybrid Baseline" else "ALS Baseline",
         x = "Time (min)", y = "Corrected Absorbance (mAU)"
       ) +
       theme_minimal()
@@ -158,9 +177,10 @@ run_hplc_analysis_agilent <- function(
   peak_plot <- plot_largest_peak(
     df_hybrid, peak_table,
     basename(sample_d_path),
-    if (use_hybrid) basename(blank_d_path) else NULL,
+    if (use_hybrid_baseline) basename(blank_d_path) else NULL,
     epsilon = eps,
-    conc_uM  = conc$c_uM
+    conc_uM  = conc$c_uM,
+    signal_wavelength = signal_wavelength
   )
 
   # 7) Return results

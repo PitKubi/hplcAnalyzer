@@ -6,11 +6,14 @@
 #' @param blank_name  Character or NULL.
 #' @param epsilon    Numeric. Extinction coefficient (M⁻¹·cm⁻¹).
 #' @param conc_uM    Numeric. Concentration (μM).
+#' @param signal_wavelength Numeric. Detection wavelength in nm, used to label the
+#'   ε row of the metrics table. Required, because a wrong ε label silently
+#'   misattributes an Edelhoch ε280 to the Kuipers & Gruppen ε214 formula.
 #' @return A ggplot object.
 #' @export
 plot_largest_peak <- function(df_hybrid, peak_table,
                               sample_name, blank_name = NULL,
-                              epsilon, conc_uM) {
+                              epsilon, conc_uM, signal_wavelength) {
   largest  <- peak_table %>% slice_max(height, n = 1)
   rt       <- largest$apex_rt; start_rt <- largest$start_rt
   end_rt   <- largest$end_rt; height   <- largest$height
@@ -20,7 +23,7 @@ plot_largest_peak <- function(df_hybrid, peak_table,
   df_peak  <- df_hybrid[i_start:i_end, ]
 
   labels <- c("RT (min)", "Height (mAU)", "Area (mAU·min)",
-              "ε214 (M⁻¹·cm⁻¹)", "Conc (μM)")
+              sprintf("ε%d (M⁻¹·cm⁻¹)", signal_wavelength), "Conc (μM)")
   values <- c(sprintf("%.2f", rt),
               sprintf("%.1f", height),
               sprintf("%.2f", area),

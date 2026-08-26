@@ -89,7 +89,8 @@ run_hplc_analysis_thermo <- function(
     sample_name = basename(sample_file),
     blank_name  = NULL,
     epsilon     = eps,
-    conc_uM     = conc$c_uM
+    conc_uM     = conc$c_uM,
+    signal_wavelength = signal_wavelength
   )
 
   # 8) return exactly the same structure as your Agilent function

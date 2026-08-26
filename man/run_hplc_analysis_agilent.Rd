@@ -40,7 +40,8 @@ run_hplc_analysis_agilent(
 
 \item{sample_als_p}{Numeric. p for global ALS baseline. Default 1e-4.}
 
-\item{use_hybrid}{Logical. If TRUE, run hybrid baseline (requires blank). Default FALSE.}
+\item{use_hybrid}{Logical. If TRUE, run hybrid baseline (requires blank). Default FALSE.
+Ignored at signal_wavelength = 280, which always takes the ALS only path.}
 
 \item{hybrid_als_lambda}{Numeric. λ for piecewise ALS. Default 6.5.}
 

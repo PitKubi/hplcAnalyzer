@@ -109,8 +109,32 @@ empty_results <- function() {
     height   = numeric(),
     area     = numeric(),
     conc_uM  = numeric(),
-    sequence = character()
+    sequence = character(),
+    status   = character()
   )
+}
+
+# Why a row carries no concentration. A run with no channel at the selected
+# wavelength, a run where the detector found no peaks and a peptide with no ε all
+# used to collapse to the same all-NA row, so the user could not tell which had
+# happened.
+unquantified_result_row <- function(sample_name, sequence, status) {
+  data.frame(
+    sample   = sample_name,
+    rt       = NA_real_,
+    height   = NA_real_,
+    area     = NA_real_,
+    conc_uM  = NA_real_,
+    sequence = sequence,
+    status   = status,
+    stringsAsFactors = FALSE
+  )
+}
+
+# Peptides with neither Trp nor Tyr have no 280 nm chromophore, so estimate_epsilon_280()
+# returns NA and no concentration can be computed. Same wording as the metrics table.
+concentration_status <- function(epsilon) {
+  if (is.na(epsilon)) "NA (missing ε)" else "OK"
 }
 
 
@@ -298,19 +322,15 @@ server <- function(input, output, session) {
               show_intermediate_plots = FALSE
             )
           }
-        }, error = function(e) NULL)
+        }, error = function(e) e)
 
-        # 4) collapse to one row
-        if (is.null(analysis) || nrow(analysis$peak_table) == 0) {
-          data.frame(
-            sample   = fn,
-            rt       = NA_real_,
-            height   = NA_real_,
-            area     = NA_real_,
-            conc_uM  = NA_real_,
-            sequence = seq_sp,
-            stringsAsFactors = FALSE
-          )
+        # 4) collapse to one row, keeping the failure reason. Same wording as the
+        # single-sample view, which already notifies on these two conditions.
+        if (inherits(analysis, "error")) {
+          unquantified_result_row(fn, seq_sp,
+                                  paste("❌ Error:", conditionMessage(analysis)))
+        } else if (nrow(analysis$peak_table) == 0) {
+          unquantified_result_row(fn, seq_sp, "⚠️ No peaks detected")
         } else {
           data.frame(
             sample   = fn,
@@ -319,6 +339,7 @@ server <- function(input, output, session) {
             area     = analysis$peak_table$area[1],
             conc_uM  = analysis$concentration_uM,
             sequence = seq_sp,
+            status   = concentration_status(analysis$epsilon),
             stringsAsFactors = FALSE
           )
         }
@@ -420,6 +441,9 @@ server <- function(input, output, session) {
     res <- results()
     if (fn %in% res$sample) {
       res[res$sample == fn, "conc_uM"] <- NA_real_
+      # Without this the row would keep its old status and claim the blanked
+      # concentration was fine.
+      res[res$sample == fn, "status"]  <- "Marked bad"
       results(res)
     }
   })
@@ -451,7 +475,8 @@ server <- function(input, output, session) {
         `Area`                 = round(area, 2),
         `Conc raw (µM)`        = round(conc_uM, 1),
         `Conc final (µM)`      = round(conc_uM * df, 1),
-        Sequence               = sequence
+        Sequence               = sequence,
+        Status                 = status
       )
   })
 
@@ -611,6 +636,14 @@ server <- function(input, output, session) {
       }, numeric(1))
     }
 
+    # A blank cell cannot be told apart from a genuine zero, so name the reason the
+    # concentration is missing. ε is NA whenever the peptide has no chromophore at the
+    # selected wavelength, which at 280 nm means no Trp and no Tyr.
+    format_conc_or_reason <- function(conc_uM, epsilon) {
+      ifelse(is.finite(conc_uM), sprintf("%.1f", conc_uM),
+             ifelse(is.na(epsilon), "NA (missing ε)", "NA"))
+    }
+
     df <- dilution()
     wl <- as.numeric(input$wavelength)
 
@@ -626,8 +659,8 @@ server <- function(input, output, session) {
         Metric = c("Manual area (mAU·min)", "Conc raw (µM)", "Conc final (µM, ×dilution)", "Dilution factor", "Inj. Vol (µL)"),
         Value  = c(
           ifelse(is.finite(area_sel),       sprintf("%.2f", area_sel), "NA"),
-          ifelse(is.finite(conc_sel),       sprintf("%.1f", conc_sel),       ifelse(is.na(eps), "NA (missing ε)", "NA")),
-          ifelse(is.finite(conc_sel_final), sprintf("%.1f", conc_sel_final), ifelse(is.na(eps), "NA (missing ε)", "NA")),
+          format_conc_or_reason(conc_sel,       eps),
+          format_conc_or_reason(conc_sel_final, eps),
           sprintf("%g", df),
           sprintf("%.1f", inj_ml * 1000)
         ),
@@ -649,8 +682,8 @@ server <- function(input, output, session) {
       `RT (min)`            = round(tab$apex_rt, 2),
       `Height (mAU)`        = round(tab$height, 1),
       `Area (mAU·min)`      = round(tab$area, 2),
-      `Conc raw (µM)`       = round(conc_raw, 1),
-      `Conc final (µM)`     = round(conc_final, 1),
+      `Conc raw (µM)`       = format_conc_or_reason(conc_raw,   eps),
+      `Conc final (µM)`     = format_conc_or_reason(conc_final, eps),
       `epsilon (M⁻¹ cm⁻¹)`  = rep(ifelse(is.na(eps), NA_real_, round(eps, 0)), nrow(tab)),
       check.names = FALSE
     )
@@ -762,7 +795,8 @@ server <- function(input, output, session) {
         height   = NA_real_,
         area     = area_sel,
         conc_uM  = calc_conc_one(area_sel, eps, inj_ml),
-        sequence = seq_used()
+        sequence = seq_used(),
+        status   = concentration_status(eps)
       )
     } else {
       # auto path: only if there is at least one detected peak
@@ -773,7 +807,8 @@ server <- function(input, output, session) {
         height   = ar$peak_table$height[1],
         area     = ar$peak_table$area[1],
         conc_uM  = calc_conc_one(ar$peak_table$area[1], eps, inj_ml),
-        sequence = seq_used()
+        sequence = seq_used(),
+        status   = concentration_status(eps)
       )
     }
 

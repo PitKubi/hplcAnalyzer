@@ -10,7 +10,8 @@ plot_largest_peak(
   sample_name,
   blank_name = NULL,
   epsilon,
-  conc_uM
+  conc_uM,
+  signal_wavelength
 )
 }
 \arguments{
@@ -25,6 +26,10 @@ plot_largest_peak(
 \item{epsilon}{Numeric. Extinction coefficient (M⁻¹·cm⁻¹).}
 
 \item{conc_uM}{Numeric. Concentration (μM).}
+
+\item{signal_wavelength}{Numeric. Detection wavelength in nm, used to label the
+ε row of the metrics table. Required, because a wrong ε label silently
+misattributes an Edelhoch ε280 to the Kuipers & Gruppen ε214 formula.}
 }
 \value{
 A ggplot object.
