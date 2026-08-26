@@ -49,3 +49,35 @@ filter_top_peaks <- function(peaks_tbl, min_rt = 6, top_n = 10) {
     dplyr::slice_head(n = top_n)
 }
 
+#' Share of the ranked peaks' summed area held by each peak
+#'
+#' @param top_peaks_tbl Tibble as returned by \code{\link{filter_top_peaks}}.
+#' @return Numeric vector of percentages, one per row of \code{top_peaks_tbl}.
+#' @export
+peak_area_percent <- function(top_peaks_tbl) {
+  # Each peak is measured against the sum of THESE peaks, not against every peak the detector
+  # found. On a 280 nm trace the detector reports dozens of sub-mAU baseline features, and
+  # dividing by all of them drags a >95 percent pure peptide down to about 59 percent. The
+  # ranked set is the main peak plus its largest impurities, which is the population a purity
+  # number is about.
+  100 * top_peaks_tbl$area / sum(top_peaks_tbl$area, na.rm = TRUE)
+}
+
+#' Share of the ranked peaks' summed area held by the main peak
+#'
+#' @param peaks_tbl Tibble from \code{\link{detect_peaks_on_smoothed}}.
+#' @param min_rt Numeric. Minimum apex_rt to keep.
+#' @param top_n Integer. How many highest peaks to rank against each other.
+#' @return Single numeric percentage, or NA when no peak survives the ranking.
+#' @export
+main_peak_area_percent <- function(peaks_tbl, min_rt = 6, top_n = 10) {
+  # Why this exists rather than the caller ranking the peaks itself: the per-sample results
+  # CSV and the on-screen peak table have to report the same purity for the same run, so both
+  # reach it through this one function and cannot drift apart on the ranking rule.
+  top_peaks <- filter_top_peaks(peaks_tbl, min_rt = min_rt, top_n = top_n)
+  # A run with no ranked peak has no purity to report. NA rather than 0, which would read as a
+  # measured absence of the main peak, and rather than 100, which would read as pure.
+  if (nrow(top_peaks) == 0) return(NA_real_)
+  peak_area_percent(top_peaks)[1]
+}
+

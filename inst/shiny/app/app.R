@@ -18,6 +18,13 @@ desc        <- dplyr::desc
 # input existed. It is also what the instrument actually injects.
 DEFAULT_INJECTION_VOLUME_UL <- 100
 
+# The min slider has shipped at 30 percent of the run since it was added, and the max bound is
+# added at 100 percent, which is the whole run. Both are named here because the sanitiser has to
+# fall back to exactly the number the slider starts at; two copies of that number would be free
+# to drift apart.
+DEFAULT_MIN_ANALYTE_RT_PERCENT <- 30
+DEFAULT_MAX_ANALYTE_RT_PERCENT <- 100
+
 ui <- fluidPage(
   titlePanel("HPLC-UV Analyzer"),
   sidebarLayout(
@@ -76,9 +83,18 @@ ui <- fluidPage(
         "Min analyte RT (% of run):",
         min   = 0,
         max   = 100,
-        value = 30,
+        value = DEFAULT_MIN_ANALYTE_RT_PERCENT,
         step  = 1
       ),
+      sliderInput(
+        "max_rt_perc",
+        "Max analyte RT (% of run):",
+        min   = 0,
+        max   = 100,
+        value = DEFAULT_MAX_ANALYTE_RT_PERCENT,
+        step  = 1
+      ),
+      helpText("Both bounds are a percentage of the run length, so one setting fits methods of different duration. 100% keeps the whole run. Lower it to drop the column regeneration step every method ends with, which the detector otherwise reports as a peak and which then takes a share of Area (%)."),
       hr(),
 
       ## ← NEW: Reset manual integration
@@ -153,15 +169,20 @@ missing_epsilon_plot <- function(signal_wavelength, peptide_sequence) {
     theme_void()
 }
 
+# main_peak_area_pct is the purity number the peak table shows on screen, carried into the
+# per-sample results so that the downloaded CSV and the screen cannot report different
+# purities for the same run. It is a ratio of two areas, so it stays valid on a run whose ε is
+# NA and which therefore has no concentration at all.
 empty_results <- function() {
   tibble::tibble(
-    sample   = character(),
-    rt       = numeric(),
-    height   = numeric(),
-    area     = numeric(),
-    conc_uM  = numeric(),
-    sequence = character(),
-    status   = character()
+    sample             = character(),
+    rt                 = numeric(),
+    height             = numeric(),
+    area               = numeric(),
+    main_peak_area_pct = numeric(),
+    conc_uM            = numeric(),
+    sequence           = character(),
+    status             = character()
   )
 }
 
@@ -171,14 +192,15 @@ empty_results <- function() {
 # happened.
 unquantified_result_row <- function(sample_name, sequence, status) {
   data.frame(
-    sample   = sample_name,
-    rt       = NA_real_,
-    height   = NA_real_,
-    area     = NA_real_,
-    conc_uM  = NA_real_,
-    sequence = sequence,
-    status   = status,
-    stringsAsFactors = FALSE
+    sample             = sample_name,
+    rt                 = NA_real_,
+    height             = NA_real_,
+    area               = NA_real_,
+    main_peak_area_pct = NA_real_,
+    conc_uM            = NA_real_,
+    sequence           = sequence,
+    status             = status,
+    stringsAsFactors   = FALSE
   )
 }
 
@@ -363,6 +385,7 @@ server <- function(input, output, session) {
     {
       m <- seq_map()
       inj_ml <- injection_volume_ml()
+      rt_window <- analyte_rt_window()
       auto_res <- lapply(samples_ls, function(sp) {
         fn <- basename(sp)
         # 1) figure out peptide sequence
@@ -399,7 +422,8 @@ server <- function(input, output, session) {
               blank_d_path            = blank_sp,
               peptide_sequence        = seq_sp,
               use_hybrid              = !is.null(blank_sp),
-              min_rt_frac             = input$min_rt_perc/100,
+              min_rt_frac             = rt_window$min_frac,
+              max_rt_frac             = rt_window$max_frac,
               signal_wavelength       = wl,
               inj_vol_ml              = inj_ml,
               show_intermediate_plots = FALSE
@@ -408,7 +432,8 @@ server <- function(input, output, session) {
             run_hplc_analysis_thermo(
               sample_file             = sp,
               peptide_sequence        = seq_sp,
-              min_rt_frac             = input$min_rt_perc/100,
+              min_rt_frac             = rt_window$min_frac,
+              max_rt_frac             = rt_window$max_frac,
               signal_wavelength       = wl,
               show_intermediate_plots = FALSE
             )
@@ -424,14 +449,15 @@ server <- function(input, output, session) {
           unquantified_result_row(fn, seq_sp, "⚠️ No peaks detected")
         } else {
           data.frame(
-            sample   = fn,
-            rt       = analysis$peak_table$apex_rt[1],
-            height   = analysis$peak_table$height[1],
-            area     = analysis$peak_table$area[1],
-            conc_uM  = analysis$concentration_uM,
-            sequence = seq_sp,
-            status   = concentration_status(analysis$epsilon),
-            stringsAsFactors = FALSE
+            sample             = fn,
+            rt                 = analysis$peak_table$apex_rt[1],
+            height             = analysis$peak_table$height[1],
+            area               = analysis$peak_table$area[1],
+            main_peak_area_pct = hplcAnalyzer::main_peak_area_percent(analysis$peak_table),
+            conc_uM            = analysis$concentration_uM,
+            sequence           = seq_sp,
+            status             = concentration_status(analysis$epsilon),
+            stringsAsFactors   = FALSE
           )
         }
       })
@@ -553,6 +579,28 @@ server <- function(input, output, session) {
     ul / 1000
   })
 
+  # Same fallback rule again, for one end of the analyte RT window. The sliders speak percent
+  # of the run because that is what a chromatographer reads off a method; the pipeline takes a
+  # fraction.
+  sanitised_rt_fraction <- function(percent_input, fallback_percent) {
+    percent <- suppressWarnings(as.numeric(percent_input))
+    if (!isTRUE(is.finite(percent)) || percent < 0 || percent > 100) {
+      percent <- fallback_percent
+    }
+    percent / 100
+  }
+
+  # Why the two bounds are sanitised together rather than one reactive each: a max at or below
+  # the min describes an empty window, and honouring it would report "no peaks detected" for
+  # every run in the batch. Falling back to the whole run reports the numbers the app reported
+  # before either bound was touched, which is the one answer that is never silently wrong.
+  analyte_rt_window <- reactive({
+    min_frac <- sanitised_rt_fraction(input$min_rt_perc, DEFAULT_MIN_ANALYTE_RT_PERCENT)
+    max_frac <- sanitised_rt_fraction(input$max_rt_perc, DEFAULT_MAX_ANALYTE_RT_PERCENT)
+    if (max_frac <= min_frac) max_frac <- DEFAULT_MAX_ANALYTE_RT_PERCENT / 100
+    list(min_frac = min_frac, max_frac = max_frac)
+  })
+
   ####reactive for sample table
   samples_table <- reactive({
     req(samples())
@@ -624,6 +672,7 @@ server <- function(input, output, session) {
     tryCatch({
       sp <- current_sample()
       wl <- as.numeric(input$wavelength)
+      rt_window <- analyte_rt_window()
       if (grepl("\\.D$", sp, ignore.case = TRUE)) {
         ## Agilent .D pipeline
         res <- run_hplc_analysis_agilent(
@@ -631,7 +680,8 @@ server <- function(input, output, session) {
           blank_d_path            = chosen_blank(),
           peptide_sequence        = seq_used(),
           use_hybrid              = use_hybrid(),
-          min_rt_frac             = input$min_rt_perc / 100,
+          min_rt_frac             = rt_window$min_frac,
+          max_rt_frac             = rt_window$max_frac,
           signal_wavelength       = wl,
           inj_vol_ml              = injection_volume_ml(),
           show_intermediate_plots = FALSE
@@ -642,7 +692,8 @@ server <- function(input, output, session) {
         res <- run_hplc_analysis_thermo(
           sample_file             = sp,
           peptide_sequence        = seq_used(),
-          min_rt_frac             = input$min_rt_perc / 100,
+          min_rt_frac             = rt_window$min_frac,
+          max_rt_frac             = rt_window$max_frac,
           signal_wavelength       = wl,
           show_intermediate_plots = FALSE
         )
@@ -765,11 +816,6 @@ server <- function(input, output, session) {
       return(data.frame(Metric = "No peaks ≥ 6 min", Value = NA_character_, check.names = FALSE))
     }
 
-    # Area (%) is each peak against the sum of THESE peaks, not every peak the
-    # detector found. On a 280 nm trace the detector reports dozens of sub-mAU
-    # baseline features, and dividing by all of them drags a >95 percent pure
-    # peptide down to about 59 percent. The top ten are the main peak plus the
-    # nine largest impurities, which is the population a purity number is about.
     conc_raw   <- calc_conc_vec(tab$area, eps, inj_ml)
     conc_final <- conc_raw * df
     eps_col    <- sprintf("ε%d (M⁻¹ cm⁻¹)", wl)
@@ -778,7 +824,7 @@ server <- function(input, output, session) {
       `RT (min)`            = round(tab$apex_rt, 2),
       `Height (mAU)`        = round(tab$height, 1),
       `Area (mAU·min)`      = round(tab$area, 2),
-      `Area (%)`            = round(100 * tab$area / sum(tab$area, na.rm = TRUE), 2),
+      `Area (%)`            = round(hplcAnalyzer::peak_area_percent(tab), 2),
       `Conc raw (µM)`       = format_conc_or_reason(conc_raw,   eps),
       `Conc final (µM)`     = format_conc_or_reason(conc_final, eps),
       `epsilon (M⁻¹ cm⁻¹)`  = rep(ifelse(is.na(eps), NA_real_, round(eps, 0)), nrow(tab)),
@@ -888,26 +934,31 @@ server <- function(input, output, session) {
       # manual path (works even if auto detector found 0 peaks)
       df_sel   <- dplyr::filter(ar$df_hybrid, time >= br$xmin, time <= br$xmax)
       area_sel <- if (nrow(df_sel)) pracma::trapz(df_sel$time, df_sel$corrected) else NA_real_
+      # A hand drawn window is not one of the ranked peaks, so it has no share of their summed
+      # area to report. Dividing it by that sum would produce a number that looks like a purity
+      # but answers no question the user asked.
       new <- tibble::tibble(
-        sample   = fn,
-        rt       = NA_real_,
-        height   = NA_real_,
-        area     = area_sel,
-        conc_uM  = calc_conc_one(area_sel, eps, inj_ml),
-        sequence = seq_used(),
-        status   = concentration_status(eps)
+        sample             = fn,
+        rt                 = NA_real_,
+        height             = NA_real_,
+        area               = area_sel,
+        main_peak_area_pct = NA_real_,
+        conc_uM            = calc_conc_one(area_sel, eps, inj_ml),
+        sequence           = seq_used(),
+        status             = concentration_status(eps)
       )
     } else {
       # auto path: only if there is at least one detected peak
       if (is.null(ar$peak_table) || !nrow(ar$peak_table)) return()
       new <- tibble::tibble(
-        sample   = fn,
-        rt       = ar$peak_table$apex_rt[1],
-        height   = ar$peak_table$height[1],
-        area     = ar$peak_table$area[1],
-        conc_uM  = calc_conc_one(ar$peak_table$area[1], eps, inj_ml),
-        sequence = seq_used(),
-        status   = concentration_status(eps)
+        sample             = fn,
+        rt                 = ar$peak_table$apex_rt[1],
+        height             = ar$peak_table$height[1],
+        area               = ar$peak_table$area[1],
+        main_peak_area_pct = hplcAnalyzer::main_peak_area_percent(ar$peak_table),
+        conc_uM            = calc_conc_one(ar$peak_table$area[1], eps, inj_ml),
+        sequence           = seq_used(),
+        status             = concentration_status(eps)
       )
     }
 

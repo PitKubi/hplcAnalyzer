@@ -12,6 +12,7 @@ run_hplc_analysis_thermo <- function(
     snr                     = 5,
     min_peak_dist_detect    = 10,
     min_rt_frac             = 0.3,
+    max_rt_frac             = 1,
     flow_rate_ml            = 1,
     pathlength_cm           = 1,
     show_intermediate_plots = FALSE,
@@ -49,7 +50,8 @@ run_hplc_analysis_thermo <- function(
     post_p        = post_p,
     snr           = snr,
     min_peak_dist = min_peak_dist_detect,
-    min_rt_frac   = min_rt_frac
+    min_rt_frac   = min_rt_frac,
+    max_rt_frac   = max_rt_frac
   )
 
   # 5) no peaks?

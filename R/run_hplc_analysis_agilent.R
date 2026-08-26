@@ -22,6 +22,8 @@
 #' @param flow_rate_ml Numeric. Flow rate in mL/min. Default 1.
 #' @param pathlength_cm Numeric. Cell pathlength in cm. Default 1.
 #' @param show_intermediate_plots Logical. Print intermediate plots? Default FALSE.
+#' @param min_rt_frac Numeric. Fraction (0–1) of total run time; peaks earlier than this are dropped. Default 0.3.
+#' @param max_rt_frac Numeric. Fraction (0–1) of total run time; peaks later than this are dropped. Default 1, which keeps the whole run.
 #' @return A list with elements: df_hybrid, peak_table, epsilon, concentration_uM, plot
 #' @export
 run_hplc_analysis_agilent <- function(
@@ -47,6 +49,7 @@ run_hplc_analysis_agilent <- function(
     pathlength_cm            = 1,
     show_intermediate_plots  = FALSE,
     min_rt_frac              = 0.3,
+    max_rt_frac              = 1,
     signal_wavelength        = 214,
     signal_ref               = 360
 ) {
@@ -138,7 +141,7 @@ run_hplc_analysis_agilent <- function(
   peak_table <- detect_peaks_on_smoothed(
     df_hybrid,
     post_win, post_p,
-    snr,    min_peak_dist_detect, min_rt_frac
+    snr,    min_peak_dist_detect, min_rt_frac, max_rt_frac
   )
   if (nrow(peak_table) == 0) {
     warning("No peaks detected in: ", sample_d_path)

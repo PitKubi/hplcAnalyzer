@@ -26,7 +26,10 @@ run_hplc_analysis_agilent(
   flow_rate_ml = 1,
   pathlength_cm = 1,
   show_intermediate_plots = FALSE,
-  min_rt_frac = 0.3
+  min_rt_frac = 0.3,
+  max_rt_frac = 1,
+  signal_wavelength = 214,
+  signal_ref = 360
 )
 }
 \arguments{
@@ -72,6 +75,10 @@ Ignored at signal_wavelength = 280, which always takes the ALS only path.}
 \item{pathlength_cm}{Numeric. Cell pathlength in cm. Default 1.}
 
 \item{show_intermediate_plots}{Logical. Print intermediate plots? Default FALSE.}
+
+\item{min_rt_frac}{Numeric. Fraction (0–1) of total run time; peaks earlier than this are dropped. Default 0.3.}
+
+\item{max_rt_frac}{Numeric. Fraction (0–1) of total run time; peaks later than this are dropped. Default 1, which keeps the whole run.}
 }
 \value{
 A list with elements: df_hybrid, peak_table, epsilon, concentration_uM, plot

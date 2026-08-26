@@ -10,7 +10,8 @@ detect_peaks_on_smoothed(
   post_p = 3,
   snr = 5,
   min_peak_dist = 10,
-  min_rt_frac = 0.3
+  min_rt_frac = 0.3,
+  max_rt_frac = 1
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ detect_peaks_on_smoothed(
 \item{min_peak_dist}{Integer. Min distance between peaks (points). Default 10.}
 
 \item{min_rt_frac}{Numeric. Fraction (0–1) of total run time; peaks earlier than this are dropped. Default 0.3.}
+
+\item{max_rt_frac}{Numeric. Fraction (0–1) of total run time; peaks later than this are dropped. Default 1, which keeps the whole run.}
 }
 \value{
 A tibble of peaks with columns peak, height, apex_rt, start_rt, end_rt, area.

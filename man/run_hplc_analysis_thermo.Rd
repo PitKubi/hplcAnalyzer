@@ -12,9 +12,11 @@ run_hplc_analysis_thermo(
   snr = 5,
   min_peak_dist_detect = 10,
   min_rt_frac = 0.3,
+  max_rt_frac = 1,
   flow_rate_ml = 1,
   pathlength_cm = 1,
-  show_intermediate_plots = FALSE
+  show_intermediate_plots = FALSE,
+  signal_wavelength = 214
 )
 }
 \arguments{
@@ -29,6 +31,10 @@ run_hplc_analysis_thermo(
 \item{snr}{Numeric. Signal-to-noise ratio threshold for peaks. Default 5.}
 
 \item{min_peak_dist_detect}{Integer. Min distance between peaks. Default 10.}
+
+\item{min_rt_frac}{Numeric. Fraction (0–1) of total run time; peaks earlier than this are dropped. Default 0.3.}
+
+\item{max_rt_frac}{Numeric. Fraction (0–1) of total run time; peaks later than this are dropped. Default 1, which keeps the whole run.}
 
 \item{flow_rate_ml}{Numeric. Flow rate in mL/min. Default 1.}
 
