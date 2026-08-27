@@ -1,8 +1,10 @@
 # R project files
 .Rproj.user
 .Rhistory
+.Rapp.history
 .RData
 .Ruserdata
+.Renviron
 
 # R package build artifacts
 *.o
@@ -10,6 +12,7 @@
 *.dll
 *.tar.gz
 *.zip
+*.Rcheck/
 
 # Documentation
 /doc/

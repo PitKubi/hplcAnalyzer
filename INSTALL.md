@@ -1,164 +1,151 @@
-# Installation Guide for hplcAnalyzer
+# Installing hplcAnalyzer
 
-This guide will walk you through installing and running the hplcAnalyzer app.
+This is the long version, written for someone who has not used R before. If you are
+comfortable in R, the short version is in the [README](README.md).
 
-## Step 1: Install R
-
-If you don't have R installed:
+## Step 1: install R
 
 1. Go to https://cran.r-project.org/
-2. Click the download link for your operating system:
-   - **Windows**: Download and run the `.exe` installer
-   - **Mac**: Download and open the `.pkg` installer
-   - **Linux**: Follow the instructions for your distribution
+2. Download the installer for your system.
+   - **Windows**: run the `.exe`
+   - **macOS**: open the `.pkg`
+   - **Linux**: follow the instructions for your distribution
+3. Accept the defaults.
 
-3. Follow the installation wizard (default settings are fine)
+hplcAnalyzer needs **R 4.1 or newer**. R 4.5 is fine.
 
-## Step 2: Install RStudio (Recommended but Optional)
+## Step 2: install RStudio (optional)
 
-RStudio makes working with R easier:
+RStudio is a friendlier window onto R. It is not required.
+https://posit.co/download/rstudio-desktop/
 
-1. Go to https://posit.co/download/rstudio-desktop/
-2. Download the free RStudio Desktop version
-3. Install it (default settings are fine)
+## Step 3: install hplcAnalyzer
 
-## Step 3: Install hplcAnalyzer
+Pick whichever of these matches what you were given.
 
-hplcAnalyzer is distributed as a source tarball, not from GitHub. You will be sent a
-file named `hplcAnalyzer_<version>.tar.gz`.
+### A. You were sent a `.tar.gz` file
 
-### First time
-
-Open R or RStudio and install the dependencies, all from CRAN:
-
-```r
-install.packages(c("chromConverter","dplyr","baseline","signal","pracma",
-                   "ggplot2","gridExtra","shiny","shinyFiles","fs","DT",
-                   "tibble","xml2","magrittr"))
-```
-
-This takes 5 to 10 minutes the first time. Then install the package itself, using the
-full path to the file you were sent:
+This is the usual route on macOS and Windows. Open R or RStudio and install the
+dependencies once. This takes 5 to 10 minutes the first time and downloads a few hundred
+megabytes.
 
 ```r
-install.packages("C:/path/to/hplcAnalyzer_0.3.0.tar.gz", repos = NULL, type = "source")
+install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot2",
+                   "gridExtra","shiny","shinyFiles","fs","DT","tibble","xml2","magrittr"))
 ```
 
-### Upgrading from an earlier version
+Then install the package itself, using the full path to the file you were sent:
 
-1. Close R and RStudio completely, then reopen. On Windows a loaded package cannot be
-   overwritten, and the install fails quietly if you skip this.
+```r
+install.packages("C:/Users/you/Downloads/hplcAnalyzer_0.3.2.tar.gz",
+                 repos = NULL, type = "source")
+```
+
+On macOS the path looks like `/Users/you/Downloads/hplcAnalyzer_0.3.2.tar.gz`. Use forward
+slashes on every platform, including Windows.
+
+### B. You have a git checkout
+
+```bash
+git clone git@github.com:PitKubi/hplc_analyzer.git
+cd hplc_analyzer
+Rscript install.R
+```
+
+`install.R` installs any missing dependencies and then the package. It needs nothing but R.
+From inside R or RStudio, the same thing:
+
+```r
+setwd("/path/to/hplc_analyzer")
+source("install.R")
+```
+
+### C. Straight from GitHub
+
+The repository is private, so this needs a GitHub personal access token with the `repo`
+scope. Put `GITHUB_PAT=ghp_...` in your `~/.Renviron` file, restart R, then:
+
+```r
+install.packages("remotes")
+remotes::install_github("PitKubi/hplc_analyzer", auth_token = Sys.getenv("GITHUB_PAT"))
+```
+
+Without a token, GitHub answers 404 and the install fails with a confusing "not found".
+
+## Step 4: upgrading from an earlier version
+
+1. **Close R and RStudio completely, then reopen.** On Windows a loaded package cannot be
+   overwritten and the install fails quietly if you skip this.
 2. Install any new dependency. Version 0.3.0 added `xml2`:
    ```r
    install.packages("xml2")
    ```
-3. Install the new tarball over the old one, exactly as above. There is no need to
+3. Install the new version over the old one, exactly as in Step 3. There is no need to
    uninstall first.
 4. Restart R again.
 
-Check which version you ended up with:
+Check what you ended up with:
 
 ```r
 packageVersion("hplcAnalyzer")
 ```
 
-## Step 4: Run the app
+## Step 5: run the app
 
 ```r
 library(hplcAnalyzer)
 run_hplc_app()
 ```
 
-The app opens in your browser. Everything runs on your own machine; no data leaves it.
+The app opens in your browser. Everything runs on your own machine and no data leaves it.
+If the browser does not open, the address is printed in the R console, usually
+`http://127.0.0.1:XXXX`. Paste it in yourself.
 
-## Step 4: Launch the App
+## Step 6: using the app
 
-Once installation is complete, run:
+1. **Choose folder directory**. For Agilent, pick the folder holding your `.D` subfolders.
+   For Thermo, pick the folder holding your `*_UV_VIS_N.txt` files.
+2. Set the **detection wavelength**. Use 214 nm unless you have a reason not to; more than
+   half of a typical peptide plate has neither Trp nor Tyr and cannot be quantified at
+   280 nm at all.
+3. Set the **injection volume** if your method does not inject 100 microlitres.
+4. Set **Max analyte RT** to 80 percent, so the column regeneration peak at the end of the
+   run is not counted. See the README for the measurement behind that number.
+5. Click **Load samples** and wait while the batch is processed.
+6. Click rows in the table, or use Previous and Next, to review individual runs.
+7. If the detector picked the wrong peak, drag across the correct one on the lower plot to
+   integrate it by hand. **Reset integration** puts it back.
+8. **Download Results CSV** when done.
 
-```r
-library(hplcAnalyzer)
-run_hplc_app()
-```
-
-The app should open in your web browser!
-
-## Step 5: Using the App
-
-1. **Browse for your data folder**: Click "Choose folder directory"
-   - For Agilent: Select the folder containing your `.D` subfolders
-   - For Thermo: Select the folder containing your `*_UV_VIS_1.txt` files
-
-2. **Optional - Upload a CSV mapping file**: 
-   - If your sequences aren't in the filenames
-   - For Thermo: Create CSV with `Well` and `Peptide Sequence` columns
-   - For Agilent: Create CSV with `Sample_ID` and `Peptide Sequence` columns
-   - See README.md for detailed CSV format examples
-
-3. **Click "Load samples"**: Wait while all samples are processed
-
-4. **Review results**: 
-   - Click rows in the table to view individual samples
-   - Use Previous/Next buttons to navigate
-   - Adjust the "Min analyte RT" slider if needed
-
-5. **Manual integration** (if auto-detection fails):
-   - Click and drag on the peak plot to select a region
-   - The metrics will update automatically
-   - Click "Reset integration" to go back to auto-detection
-
-6. **Download results**: Click "Download Results CSV" when done
+If the sequences in your folder names are truncated, use **Download CSV map template**,
+correct the sequences in the file, upload it with **Optional CSV map**, and click
+**Load samples** again.
 
 ## Troubleshooting
 
-### "Package 'XXX' not available"
+**"Package 'chromConverter' is not available"**
+Your R is older than 4.1. Update R.
 
-Some packages may need to be installed from Bioconductor:
+**"No matching DAD signal (214/360) found"**
+That `.D` folder has no diode array signal at the requested wavelength with a 360 nm
+reference. Standby, wash and diagnostic runs fail this way and can be ignored. For a real
+sample, check what the method actually recorded.
 
-```r
-if (!require("BiocManager")) install.packages("BiocManager")
-BiocManager::install("chromConverter")
-```
+**"No peaks detected"**
+Lower the SNR threshold in a script (`snr = 3` instead of 5), or lower the Min analyte RT
+slider. Check the upper plot to see whether the baseline correction is sensible.
 
-### "Unable to install package"
+**The concentration column says `NA (missing eps)`**
+Either no sequence was resolved for that run, or the peptide has no chromophore at the
+selected wavelength. At 280 nm that means no Trp and no Tyr, and no concentration can be
+computed at all. The `Status` column in the results CSV says which.
 
-Try installing with dependencies:
-
-```r
-devtools::install_github("yourusername/hplcAnalyzer", dependencies = TRUE)
-```
-
-### App doesn't open in browser
-
-The app URL should be printed in the R console (usually `http://127.0.0.1:XXXX`). Copy and paste this into your browser.
-
-### "No matching DAD signal found" error
-
-Your Agilent data might use different wavelengths. You can specify custom wavelengths:
-
-```r
-# For command-line usage
-df <- read_hplc_agilent("path/to/sample.D", 
-                        signal_wavelength = 280,  # change from 214
-                        signal_ref = 360)
-```
-
-### Need more help?
-
-Open an issue on GitHub: https://github.com/yourusername/hplcAnalyzer/issues
-
-## Updating hplcAnalyzer
-
-To get the latest version:
-
-```r
-devtools::install_github("yourusername/hplcAnalyzer", force = TRUE)
-```
+**Something else**
+The repository issue tracker is at https://github.com/PitKubi/hplc_analyzer/issues
+(private; you need access).
 
 ## Uninstalling
-
-If you need to remove hplcAnalyzer:
 
 ```r
 remove.packages("hplcAnalyzer")
 ```
-
