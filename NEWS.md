@@ -1,3 +1,18 @@
+# hplcAnalyzer 0.5.2
+
+* **Documented how the integration window is chosen**, after the shaded region in the peak plot
+  was read, reasonably, as the integration clipping the peak. It is not: the window runs between
+  the two local minima either side of the apex, so a fused shoulder puts the boundary partway up
+  the flank. That is a perpendicular drop and it keeps the neighbour out of the main peak.
+  Worth stating plainly because **no parameter moves it**: raising `snr` from 5 to 100 on a test
+  run leaves the start at 12.01 min and the area at 218.1 unchanged, and `min_peak_dist` and
+  `post_win` only change which peaks are reported. The rule lives in `pracma::findpeaks()`.
+  It is also common in purity samples: of roughly 70 runs in one production batch, four had a
+  main peak whose integration began and ended below 2 percent of peak height.
+
+* Screenshots reshot on four of those four cleanly resolved runs, so the walkthrough shows an
+  integration running foot to foot rather than one that invites the wrong reading.
+
 # hplcAnalyzer 0.5.1
 
 * **The ALS asymmetry parameter goes from 1e-4 to 1e-6, and lambda settles at 5.5.** 0.5.0

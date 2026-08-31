@@ -9,7 +9,7 @@ the peaks, and converts the main peak area to molarity using a molar absorptivit
 from the peptide sequence. Everything runs locally, either from the R console or from a Shiny
 app aimed at bench chemists rather than R programmers.
 
-Version 0.5.1. See [NEWS.md](NEWS.md) for the version history.
+Version 0.5.2. See [NEWS.md](NEWS.md) for the version history.
 
 ![The app with a batch loaded](man/figures/app-03-sample-detail.png)
 
@@ -183,13 +183,13 @@ cd hplc_analyzer
 R CMD build .
 ```
 
-That writes `hplcAnalyzer_0.5.1.tar.gz`. Send that file. The recipient installs the CRAN
+That writes `hplcAnalyzer_0.5.2.tar.gz`. Send that file. The recipient installs the CRAN
 dependencies once and then the tarball:
 
 ```r
 install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot2",
                    "gridExtra","shiny","shinyFiles","fs","DT","tibble","xml2","magrittr"))
-install.packages("C:/path/to/hplcAnalyzer_0.5.1.tar.gz", repos = NULL, type = "source")
+install.packages("C:/path/to/hplcAnalyzer_0.5.2.tar.gz", repos = NULL, type = "source")
 ```
 
 On Windows, close and reopen R before installing over an existing version. A loaded package
@@ -214,9 +214,12 @@ run_hplc_app()
 The app opens in your browser. Nothing leaves your machine: there is no upload, no account and
 no network call anywhere in the package.
 
-The run shown below is a real Agilent batch of four peptide injections. The peptide names are
-synthetic, so the numbers belong to the sequences on screen rather than to anyone's samples.
-There is no blank in this folder, so the screenshots show the plain ALS baseline path; see
+The run shown below is a real Agilent batch of four peptide injections, chosen because each
+main peak resolves to baseline on both sides; see
+[how the integration window is chosen](#how-the-integration-window-is-chosen) for what happens
+when it does not. The peptide names are synthetic, so the numbers belong to the sequences on
+screen rather than to anyone's samples. There is no blank in this folder, so the screenshots
+show the plain ALS baseline path; see
 [the blank-subtracting path leaves an injector artefact](#the-blank-subtracting-path-leaves-an-injector-artefact)
 for what changes when a blank is present.
 
@@ -252,11 +255,13 @@ and say so in plain words rather than reporting a number that would be meaningle
 
 ![The same batch at 280 nm](man/figures/app-04-batch-280nm.png)
 
-In this batch, `SAMPLEYK` and `SAMPLEWK` quantify at both wavelengths; `TESTPEPTIDEK` and
-`PEPTIDESAMPLE` have no 280 nm chromophore at all. That split is not a failure, it is the
-reason 214 nm is the default: only about a third of tryptic peptides carry Trp or Tyr. Note how
-much smaller the 280 nm signal is: 11.51 mAU-min of peak area against 218.09 at 214 nm on
-the same injection.
+In this batch, `SAMPLEWK`, `SAMPLEWWK` and `SAMPLEPEPTIDEY` quantify at both wavelengths;
+`TESTPEPTIDEK` has no 280 nm chromophore at all and returns `NA (missing eps)`. That is not a
+failure, it is the reason 214 nm is the default: only about a third of tryptic peptides carry
+Trp or Tyr. Note also how much smaller the 280 nm signal is, and how much it depends on what
+the peptide carries: on the same four injections the main peak area at 280 nm is 43.96, 114.38,
+7.52 and 0.06 mAU-min against 220.87, 438.79, 124.86 and 172.00 at 214 nm. Two tryptophans
+give a usable 280 nm peak; a single tyrosine gives one twenty times smaller.
 
 **Step 5. Download the results.** **Download Results CSV** writes one row per run; the columns
 are listed under [Results CSV columns](#results-csv-columns).
@@ -553,6 +558,30 @@ Both are exposed as `sample_als_lambda` and `sample_als_p` on the scripted inter
 method needs something else. The piecewise baseline on the blank-subtracting path has its own
 pair, `hybrid_als_lambda` and `hybrid_als_p`.
 
+### How the integration window is chosen
+
+The area of a peak is integrated between the two local minima either side of its apex, which is
+what `pracma::findpeaks()` reports as the peak's start and end. When the peak is resolved, those
+minima sit at baseline and the integration runs foot to foot. When something is fused onto the
+flank, the minimum sits partway up it, and the integration then starts there: a perpendicular
+drop at the valley, which is the standard treatment for an unresolved pair and keeps the
+impurity out of the main peak's area.
+
+**This is worth knowing because it looks wrong on screen.** The shaded region in the peak plot
+begins at a cliff partway up the rising edge rather than at the baseline, and the natural
+reading is that the integration is clipping the peak. It is not; it is excluding a neighbour.
+
+Two things follow. **No parameter changes it.** `snr`, `min_peak_dist` and `post_win` all change
+which peaks are reported, and none of them moves the boundary of the peak that survives: raising
+`snr` from 5 to 100 on a test run leaves the start at 12.01 min and the area at 218.1 either way.
+The boundary rule is in `findpeaks()`, not in a setting. And **it is common in purity samples**:
+across roughly 70 runs of one production batch, only four had a main peak whose integration
+began and ended below 2 percent of peak height. The median start sat at about 9 percent.
+
+If you need the fused shoulder included, integrate it yourself from `result$df_hybrid`, which
+carries the corrected trace, or resolve the pair chromatographically. The package will not merge
+them for you, because merging a real impurity into the main peak would overstate purity.
+
 ### The blank-subtracting path leaves an injector artefact
 
 At 214 nm, when a blank is present in the folder, the app takes the blank-subtracting hybrid
@@ -718,6 +747,10 @@ that has already been reported. Set it yourself.
 - **The hybrid baseline path can fail on individual runs.** One of 58 runs in the batch tested
   errors inside `baseline_hybrid_sm()` with `invalid 'times' argument`. The app catches it, and
   the row carries the error text rather than a number.
+- **The integration window stops at a fused shoulder**, so on a peak with an unresolved
+  neighbour the shaded region starts partway up the flank rather than at baseline. That is a
+  perpendicular drop and it is deliberate, but no parameter adjusts it. See
+  [how the integration window is chosen](#how-the-integration-window-is-chosen).
 - **The hybrid baseline path over-subtracts the injector peak**, leaving a constant -317 mAU
   artefact at 3.28 min that the guard ramp does not cover, and returns concentrations 5 to 15
   percent different from the ALS path on the same runs. See
@@ -816,7 +849,7 @@ GPL-3. Copyright Peter Kubiniok.
 If you use hplcAnalyzer, cite the software together with references 1 and 2 above:
 
 > Kubiniok, P. (2026). hplcAnalyzer: automated HPLC-UV analysis and peptide concentration
-> estimation. R package version 0.5.1.
+> estimation. R package version 0.5.2.
 
 If you report a 214 nm concentration from it, say which coefficients you used. The shipped
 `estimate_epsilon_214()` is **not** the published Kuipers and Gruppen value for tryptophan;
