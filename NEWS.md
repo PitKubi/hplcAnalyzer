@@ -1,3 +1,19 @@
+# hplcAnalyzer 0.5.1
+
+* **The ALS asymmetry parameter goes from 1e-4 to 1e-6, and lambda settles at 5.5.** 0.5.0
+  raised lambda alone, which fixed the peak but over-stiffened the rest of the trace. Gridding
+  lambda against p on 20 runs, and looking at the fits rather than only the summary numbers,
+  p is the better lever: it is the parameter that decides how hard the baseline is pushed under
+  the data, so lowering it keeps the baseline off the peak without making it too rigid to follow
+  the solvent front.
+
+  Median climb of the fitted baseline above its own level 1.5 min either side of the apex:
+  **10.0 mAU** at the original lambda 4.0 with p 1e-4, **5.0** at lambda 5.5 with p 1e-4, and
+  **1.1** at lambda 5.5 with p 1e-6, the lowest of the grid. Raising lambda to 6.5 instead
+  reaches a similar climb but the corrected trace then needs 9.6 min to settle back to zero
+  after the injector rather than 6.5, and between peaks it sits 1.6 mAU off zero rather than
+  0.6. Visual check of the fitted baseline through the peak is in the commit that made it.
+
 # hplcAnalyzer 0.5.0
 
 * **The global ALS baseline lambda goes from 4.0 to 5.5, which changes every 214 nm area and

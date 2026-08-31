@@ -9,7 +9,7 @@ the peaks, and converts the main peak area to molarity using a molar absorptivit
 from the peptide sequence. Everything runs locally, either from the R console or from a Shiny
 app aimed at bench chemists rather than R programmers.
 
-Version 0.5.0. See [NEWS.md](NEWS.md) for the version history.
+Version 0.5.1. See [NEWS.md](NEWS.md) for the version history.
 
 ![The app with a batch loaded](man/figures/app-03-sample-detail.png)
 
@@ -183,13 +183,13 @@ cd hplc_analyzer
 R CMD build .
 ```
 
-That writes `hplcAnalyzer_0.5.0.tar.gz`. Send that file. The recipient installs the CRAN
+That writes `hplcAnalyzer_0.5.1.tar.gz`. Send that file. The recipient installs the CRAN
 dependencies once and then the tarball:
 
 ```r
 install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot2",
                    "gridExtra","shiny","shinyFiles","fs","DT","tibble","xml2","magrittr"))
-install.packages("C:/path/to/hplcAnalyzer_0.5.0.tar.gz", repos = NULL, type = "source")
+install.packages("C:/path/to/hplcAnalyzer_0.5.1.tar.gz", repos = NULL, type = "source")
 ```
 
 On Windows, close and reopen R before installing over an existing version. A loaded package
@@ -255,7 +255,7 @@ and say so in plain words rather than reporting a number that would be meaningle
 In this batch, `SAMPLEYK` and `SAMPLEWK` quantify at both wavelengths; `TESTPEPTIDEK` and
 `PEPTIDESAMPLE` have no 280 nm chromophore at all. That split is not a failure, it is the
 reason 214 nm is the default: only about a third of tryptic peptides carry Trp or Tyr. Note how
-much smaller the 280 nm signal is: 11.43 mAU-min of peak area against 217.49 at 214 nm on
+much smaller the 280 nm signal is: 11.51 mAU-min of peak area against 218.09 at 214 nm on
 the same injection.
 
 **Step 5. Download the results.** **Download Results CSV** writes one row per run; the columns
@@ -535,6 +535,24 @@ in case 1 stayed invisible until 2026.
 
 ## Behaviour that will surprise you
 
+### The baseline is tuned to pass under the peak, not through it
+
+The global ALS baseline runs at **lambda 5.5, p 1e-6**. Those two numbers were tuned together
+by looking at the fit through the main peak on 20 runs, not by eye on one:
+
+![baseline tuning check](man/figures/baseline_tuning_check.png)
+
+Left is the original setting. The fitted baseline visibly climbs under the peak and takes area
+with it, a median of 10.0 mAU above its own level 1.5 min either side of the apex. Middle is
+what ships now, 1.1 mAU, the lowest of the grid tested. Right shows that stiffening lambda
+alone reaches a similar climb but pays for it elsewhere: the corrected trace then needs 9.6 min
+to settle back to zero after the injector rather than 6.5, and sits 1.6 mAU off zero between
+peaks rather than 0.6.
+
+Both are exposed as `sample_als_lambda` and `sample_als_p` on the scripted interface if a
+method needs something else. The piecewise baseline on the blank-subtracting path has its own
+pair, `hybrid_als_lambda` and `hybrid_als_p`.
+
 ### The blank-subtracting path leaves an injector artefact
 
 At 214 nm, when a blank is present in the folder, the app takes the blank-subtracting hybrid
@@ -798,7 +816,7 @@ GPL-3. Copyright Peter Kubiniok.
 If you use hplcAnalyzer, cite the software together with references 1 and 2 above:
 
 > Kubiniok, P. (2026). hplcAnalyzer: automated HPLC-UV analysis and peptide concentration
-> estimation. R package version 0.5.0.
+> estimation. R package version 0.5.1.
 
 If you report a 214 nm concentration from it, say which coefficients you used. The shipped
 `estimate_epsilon_214()` is **not** the published Kuipers and Gruppen value for tryptophan;

@@ -9,7 +9,7 @@ run_hplc_analysis_agilent(
   blank_d_path = NULL,
   peptide_sequence,
   sample_als_lambda = 5.5,
-  sample_als_p = 1e-04,
+  sample_als_p = 1e-06,
   use_hybrid = FALSE,
   hybrid_als_lambda = 6.5,
   hybrid_als_p = 1e-04,
@@ -40,14 +40,18 @@ run_hplc_analysis_agilent(
 \item{peptide_sequence}{Character. Peptide one-letter code.}
 
 \item{sample_als_lambda}{Numeric. λ for global ALS baseline. Default 5.5.
-At the previous default of 4.0 the fitted baseline climbed into the main peak: measured on
-four runs it rose 17.8, 45.3, 13.8 and 71.1 mAU under the apex against the baseline 1.5 min
-either side, and the integrated area was still growing with λ. Area plateaus between 5.5 and
-6.5 and the climb falls to 3 to 12 mAU, under 1.5 percent of peak height. Past 7 the
-baseline is too stiff and starts sweeping neighbouring signal into the peak: at λ = 8 the
-area jumps 14 to 31 percent and Area (%) collapses. 5.5 sits on the plateau with margin.}
+λ is stiffness and `sample_als_p` is how hard the fit is pushed under the data. The two were
+tuned together on 20 runs, measuring how far the fitted baseline climbs above its own level
+1.5 min either side of the peak apex. At the old 4.0 with p = 1e-4 the median climb was
+10.0 mAU, the baseline riding up into the peak and taking area with it. Raising λ alone
+helps the peak but over-stiffens elsewhere: at λ = 6.5, p = 1e-4 the corrected trace needs
+9.6 min to settle back to zero after the injector instead of 6.7. Lowering p is the better
+lever. At λ = 5.5, p = 1e-6 the median climb is 1.1 mAU, the lowest of the grid tested, the
+trace settles in 6.5 min and sits within 0.6 mAU of zero between peaks.}
 
-\item{sample_als_p}{Numeric. p for global ALS baseline. Default 1e-4.}
+\item{sample_als_p}{Numeric. p for global ALS baseline. Default 1e-6. See
+`sample_als_lambda`; the two are tuned as a pair and p is the one that keeps the baseline
+under the peak.}
 
 \item{use_hybrid}{Logical. If TRUE, run hybrid baseline (requires blank). Default FALSE.
 Ignored at signal_wavelength = 280, which always takes the ALS only path.}
