@@ -547,12 +547,20 @@ by looking at the fit through the main peak on 20 runs, not by eye on one:
 
 ![baseline tuning check](man/figures/baseline_tuning_check.png)
 
-Left is the original setting. The fitted baseline visibly climbs under the peak and takes area
-with it, a median of 10.0 mAU above its own level 1.5 min either side of the apex. Middle is
-what ships now, 1.1 mAU, the lowest of the grid tested. Right shows that stiffening lambda
-alone reaches a similar climb but pays for it elsewhere: the corrected trace then needs 9.6 min
-to settle back to zero after the injector rather than 6.5, and sits 1.6 mAU off zero between
-peaks rather than 0.6.
+The orange line joins the peak's own two feet, which is the classical valley-to-valley
+baseline. Anything the fitted baseline does above that line is area taken out of the peak.
+
+On the left, at the original setting, the fitted baseline lifts into a hump of about 40 mAU
+directly under the peak while the true local baseline either side is 25. That is the clipping.
+On the right, at what ships now, it runs flat at 27 straight under the peak.
+
+Measured across 47 runs of a production batch: at the original setting the fitted baseline sits
+above the foot-to-foot line at the apex on **23 percent of runs**; at the shipped setting, on
+**none of them**, and its maximum excess anywhere inside a peak is -11.6 mAU, so it is strictly
+below the foot line everywhere. Stiffening lambda alone would also stop the clipping but pays
+for it elsewhere: the corrected trace then needs 9.6 min to settle back to zero after the
+injector rather than 6.5, and sits 1.6 mAU off zero between peaks rather than 0.6. Lowering p
+is what fixes the peak without that cost.
 
 Both are exposed as `sample_als_lambda` and `sample_als_p` on the scripted interface if a
 method needs something else. The piecewise baseline on the blank-subtracting path has its own
