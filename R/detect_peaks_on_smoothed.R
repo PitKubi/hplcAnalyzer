@@ -66,7 +66,7 @@ detect_peaks_on_smoothed <- function(df,
   # 24.1 minute runs.
   # Why an upper bound exists at all: every method here ends with a column regeneration /
   # high organic step, and the detector reports that step as a peak like any other. Measured
-  # across 66 runs of batch a 57 peptide production batch it apexes between 20.7 and 24.0
+  # across 66 runs of a 57 peptide production batch it apexes between 20.7 and 24.0
   # minutes on a 24.1 minute run while no genuine analyte peak elutes later than 18.0
   # minutes, so it is instrument behaviour and not sample.
   # Why the default is 1 and not a value that would exclude it: apex_rt is always drawn from

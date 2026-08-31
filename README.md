@@ -9,7 +9,7 @@ the peaks, and converts the main peak area to molarity using a molar absorptivit
 from the peptide sequence. Everything runs locally, either from the R console or from a Shiny
 app aimed at bench chemists rather than R programmers.
 
-Version 0.4.0. See [NEWS.md](NEWS.md) for the version history.
+Version 0.5.0. See [NEWS.md](NEWS.md) for the version history.
 
 ![The app with a batch loaded](man/figures/app-03-sample-detail.png)
 
@@ -183,13 +183,13 @@ cd hplc_analyzer
 R CMD build .
 ```
 
-That writes `hplcAnalyzer_0.4.0.tar.gz`. Send that file. The recipient installs the CRAN
+That writes `hplcAnalyzer_0.5.0.tar.gz`. Send that file. The recipient installs the CRAN
 dependencies once and then the tarball:
 
 ```r
 install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot2",
                    "gridExtra","shiny","shinyFiles","fs","DT","tibble","xml2","magrittr"))
-install.packages("C:/path/to/hplcAnalyzer_0.4.0.tar.gz", repos = NULL, type = "source")
+install.packages("C:/path/to/hplcAnalyzer_0.5.0.tar.gz", repos = NULL, type = "source")
 ```
 
 On Windows, close and reopen R before installing over an existing version. A loaded package
@@ -255,7 +255,8 @@ and say so in plain words rather than reporting a number that would be meaningle
 In this batch, `SAMPLEYK` and `SAMPLEWK` quantify at both wavelengths; `TESTPEPTIDEK` and
 `PEPTIDESAMPLE` have no 280 nm chromophore at all. That split is not a failure, it is the
 reason 214 nm is the default: only about a third of tryptic peptides carry Trp or Tyr. Note how
-much smaller the 280 nm signal is, 38.8 mAU against 702.8 at 214 nm on the same injection.
+much smaller the 280 nm signal is: 11.43 mAU-min of peak area against 217.49 at 214 nm on
+the same injection.
 
 **Step 5. Download the results.** **Download Results CSV** writes one row per run; the columns
 are listed under [Results CSV columns](#results-csv-columns).
@@ -666,8 +667,7 @@ serves both instruments. Extra columns are ignored.
 **Why 80 percent for the maximum.** Every method here ends with a column regeneration step at
 high organic, and the detector reports that step as a peak like any other. It appears in all
 runs including blanks, so it is instrument behaviour and not sample. Re-measured on this
-package at 214 nm over the 56 of 57 peptide runs of batch `a 57 peptide production batch`
-that complete, and across the ranked peaks the app actually reports, the latest genuine
+package at 214 nm over the 56 of 57 peptide runs of a production batch that complete, and across the ranked peaks the app actually reports, the latest genuine
 analyte peak sits at **74.6 percent** of the run and the next ranked peak at **86.5 percent**. Nothing at all falls in
 between, so any cutoff from about 75 to 86 percent separates them with no analyte lost, and 80
 percent sits comfortably in the middle. Left at the default of 100 percent, the regeneration
@@ -798,7 +798,7 @@ GPL-3. Copyright Peter Kubiniok.
 If you use hplcAnalyzer, cite the software together with references 1 and 2 above:
 
 > Kubiniok, P. (2026). hplcAnalyzer: automated HPLC-UV analysis and peptide concentration
-> estimation. R package version 0.4.0.
+> estimation. R package version 0.5.0.
 
 If you report a 214 nm concentration from it, say which coefficients you used. The shipped
 `estimate_epsilon_214()` is **not** the published Kuipers and Gruppen value for tryptophan;

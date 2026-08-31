@@ -3,7 +3,13 @@
 #' @param sample_d_path Path to sample .D folder.
 #' @param blank_d_path  Path to blank .D folder or NULL.
 #' @param peptide_sequence Character. Peptide one-letter code.
-#' @param sample_als_lambda Numeric. λ for global ALS baseline. Default 4.0.
+#' @param sample_als_lambda Numeric. λ for global ALS baseline. Default 5.5.
+#'   At the previous default of 4.0 the fitted baseline climbed into the main peak: measured on
+#'   four runs it rose 17.8, 45.3, 13.8 and 71.1 mAU under the apex against the baseline 1.5 min
+#'   either side, and the integrated area was still growing with λ. Area plateaus between 5.5 and
+#'   6.5 and the climb falls to 3 to 12 mAU, under 1.5 percent of peak height. Past 7 the
+#'   baseline is too stiff and starts sweeping neighbouring signal into the peak: at λ = 8 the
+#'   area jumps 14 to 31 percent and Area (%) collapses. 5.5 sits on the plateau with margin.
 #' @param sample_als_p Numeric. p for global ALS baseline. Default 1e-4.
 #' @param use_hybrid Logical. If TRUE, run hybrid baseline (requires blank). Default FALSE.
 #'   Ignored at signal_wavelength = 280, which always takes the ALS only path.
@@ -30,7 +36,7 @@ run_hplc_analysis_agilent <- function(
     sample_d_path,
     blank_d_path             = NULL,
     peptide_sequence,
-    sample_als_lambda        = 4.0,
+    sample_als_lambda        = 5.5,
     sample_als_p             = 1e-4,
     use_hybrid               = FALSE,
     hybrid_als_lambda        = 6.5,

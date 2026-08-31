@@ -1,3 +1,35 @@
+# hplcAnalyzer 0.5.0
+
+* **The global ALS baseline lambda goes from 4.0 to 5.5, which changes every 214 nm area and
+  concentration.** At 4.0 the fitted baseline climbed into the main peak instead of passing
+  under it. Measured on four runs, the baseline rose **17.8, 45.3, 13.8 and 71.1 mAU** at the
+  peak apex above its own level 1.5 minutes either side, and the integrated area was still
+  growing as lambda increased, which is the signature of a baseline eating signal.
+
+  Sweeping lambda from 3.0 to 8.0 on those runs, area plateaus between about 5.5 and 6.5 and
+  the climb falls to **3 to 12 mAU**, under 1.5 percent of peak height. Past 7 the baseline is
+  too stiff and starts sweeping neighbouring signal into the peak: at lambda 8 the area jumps
+  14 to 31 percent and Area (%) collapses as the ten ranked peaks merge. 5.5 sits on the
+  plateau with margin at both ends.
+
+  Effect on reported numbers: areas rise by **2.5 to 10.5 percent** on the runs measured, more
+  where the peak sits on a busy stretch of baseline. Purity improves too, for example 92.9 to
+  96.1 percent and 90.7 to 93.7 percent on two of the four. The piecewise lambda used by the
+  blank-subtracting path was already 6.5 and is unchanged; 4.0 was the outlier.
+
+* **A measured defect in the blank-subtracting path is now documented**, not fixed. At 214 nm
+  with a blank present, `align_subtract_then_hybrid()` over-subtracts the blank's own injector
+  peak and leaves about **-317 mAU at 3.28 min in every run**, varying by less than 2 mAU
+  across a batch; the plain ALS path leaves -1.6 mAU. The one minute guard ramp does not reach
+  it. It cannot corrupt a reported concentration, because it sits before the analyte window,
+  but the two paths return concentrations 5 to 15 percent apart and it is the hybrid one that
+  is biased high against hand integration. See the README, "The blank-subtracting path leaves
+  an injector artefact".
+
+* Documentation: the README gains use case scenarios, a screenshot walkthrough of the app, a
+  worked data cases section and a references section. Sample identifiers in the examples and
+  screenshots no longer contain anything that reads as a date.
+
 # hplcAnalyzer 0.4.0
 
 * **The 214 nm tryptophan extinction coefficient is recalibrated, from the published 29,050
