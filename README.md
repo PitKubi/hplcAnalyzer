@@ -9,7 +9,44 @@ the peaks, and converts the main peak area to molarity using a molar absorptivit
 from the peptide sequence. Everything runs locally, either from the R console or from a Shiny
 app aimed at bench chemists rather than R programmers.
 
-Version 0.3.2. See [NEWS.md](NEWS.md) for the version history.
+Version 0.4.0. See [NEWS.md](NEWS.md) for the version history.
+
+![The app with a batch loaded](man/figures/app-03-sample-detail.png)
+
+---
+
+## What you can do with it
+
+Three things people actually use this for. Each is a complete recipe; the walkthrough below
+shows the clicks.
+
+### 1. Purity of a synthesis batch, no sequences required
+
+You have sixty `.D` folders off the prep queue and you need a percent-purity number for each.
+Point the app at the folder, click **Load samples**, read the **Area (%)** column of the peak
+table, download the CSV. Purity is an area ratio, so it needs no extinction coefficient and no
+sequence: it works even for peptides the app cannot quantify. Set **Max analyte RT** to 80
+percent first, or the column regeneration step at the end of the run counts as a peak and
+eats into the denominator.
+
+### 2. Concentration without a standard curve
+
+You need micromolar for each peptide, to normalise a set of stocks. Same batch, but now every
+run needs a sequence, which the app resolves from the folder name, `SAMPLE.XML`, or a CSV map
+you upload. Set the injection volume if the method is not 100 microlitres. Read **Conc final
+(µM)**. There is no calibrant anywhere in this: the absorptivity is predicted from the
+sequence, so one injection per peptide is enough.
+
+### 3. Cross-check a suspect number at a second wavelength
+
+A concentration looks wrong and you want a second opinion that does not involve running
+anything again. If the peptide contains a tryptophan or a tyrosine, switch the wavelength to
+280 nm and re-load: the same injection is quantified through a completely different
+chromophore and a different absorptivity model. On the batches behind
+[Recalibration of eps214](#recalibration-of-eps214) the two channels agree to a median of 8
+percent, so a peptide where they disagree by 30 percent is telling you something. Peptides
+with neither Trp nor Tyr return `NA (missing ε)` at 280 nm, by design, and cannot be
+cross-checked this way.
 
 ---
 
@@ -43,7 +80,59 @@ itself, though some of its CRAN dependencies compile from source on Linux.
 `DESCRIPTION` declares no minimum R version, but `chromConverter`, `dplyr` and `ggplot2` all
 require **R 4.1 or newer**, so that is the effective floor. Developed and tested on R 4.5.2.
 
-### From a git checkout (recommended)
+### Step by step, from nothing to a running app
+
+**1. Install R.** hplcAnalyzer needs R 4.1 or newer; 4.5 is what it is developed on.
+
+| Platform | How |
+|---|---|
+| **macOS** | Download the `.pkg` from [cran.r-project.org/bin/macosx](https://cran.r-project.org/bin/macosx/). Take the **arm64** build on Apple Silicon (M1 and later) and the **x86_64** build on Intel. Double click, accept the defaults. |
+| **Windows** | Download the installer from [cran.r-project.org/bin/windows/base](https://cran.r-project.org/bin/windows/base/). Accept the defaults. Rtools is **not** needed. |
+| **Ubuntu / Debian** | `sudo apt update && sudo apt install r-base r-base-dev`. The `-dev` package matters: several CRAN dependencies compile from source on Linux. |
+
+RStudio is optional and changes nothing here. If you use it, install it after R.
+
+**2. Get the code.** Either clone it:
+
+```bash
+git clone git@github.com:PitKubi/hplc_analyzer.git
+cd hplc_analyzer
+```
+
+or download the ZIP from the repository's green **Code** button and unzip it. On macOS the
+unzipped folder lands in `~/Downloads/hplc_analyzer-main`; `cd` there.
+
+**3. Install the package and everything it needs, in one command:**
+
+```bash
+Rscript install.R
+```
+
+Expect five to fifteen minutes on a first run, longer on Linux where packages compile. It is
+safe to re-run; anything already present is skipped.
+
+**4. Start the app.**
+
+```bash
+Rscript -e 'hplcAnalyzer::run_hplc_app()'
+```
+
+Your browser opens on the app. Leave the terminal window open, it is the server. Ctrl-C in
+that terminal stops it.
+
+**If step 3 fails**, the usual cause on macOS is a package that wants to compile. Force binary
+installs and try again:
+
+```r
+options(pkgType = "binary")
+source("install.R")
+```
+
+On Ubuntu a compile failure usually names a missing system library. `sudo apt install
+libcurl4-openssl-dev libssl-dev libxml2-dev libfontconfig1-dev` covers the ones these
+dependencies ask for.
+
+### From a git checkout, the short version
 
 ```bash
 git clone git@github.com:PitKubi/hplc_analyzer.git
@@ -62,9 +151,16 @@ source("install.R")
 
 ### Directly from GitHub
 
-**This repository is private.** A plain `remotes::install_github("PitKubi/hplc_analyzer")`
-will fail with a 404 for anyone without access, because GitHub returns 404 rather than 403 for
-private repositories. Use a personal access token with the `repo` scope:
+If the repository is public, this is all it takes:
+
+```r
+install.packages("remotes")
+remotes::install_github("PitKubi/hplc_analyzer")
+```
+
+**While it is private**, that call fails with a 404 rather than a 403, because GitHub hides
+private repositories rather than refusing them. Use a personal access token with the `repo`
+scope:
 
 ```r
 install.packages("remotes")
@@ -73,8 +169,7 @@ remotes::install_github("PitKubi/hplc_analyzer",
 ```
 
 Put the token in `~/.Renviron` as `GITHUB_PAT=ghp_...` rather than typing it into a script.
-Never commit it. If the repository is ever made public, the plain call without `auth_token`
-works and the token can be dropped.
+Never commit it.
 
 Note the repository is named `hplc_analyzer` while the package is named `hplcAnalyzer`.
 
@@ -88,13 +183,13 @@ cd hplc_analyzer
 R CMD build .
 ```
 
-That writes `hplcAnalyzer_0.3.2.tar.gz`. Send that file. The recipient installs the CRAN
+That writes `hplcAnalyzer_0.4.0.tar.gz`. Send that file. The recipient installs the CRAN
 dependencies once and then the tarball:
 
 ```r
 install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot2",
                    "gridExtra","shiny","shinyFiles","fs","DT","tibble","xml2","magrittr"))
-install.packages("C:/path/to/hplcAnalyzer_0.3.2.tar.gz", repos = NULL, type = "source")
+install.packages("C:/path/to/hplcAnalyzer_0.4.0.tar.gz", repos = NULL, type = "source")
 ```
 
 On Windows, close and reopen R before installing over an existing version. A loaded package
@@ -109,28 +204,59 @@ new to R.
 
 ---
 
-## Quick start
+## Walkthrough
 
 ```r
 library(hplcAnalyzer)
 run_hplc_app()
 ```
 
-The app opens in your browser. Then:
+The app opens in your browser. Nothing leaves your machine: there is no upload, no account and
+no network call anywhere in the package.
 
-1. **Choose folder directory** and pick the folder holding your `.D` folders or your
-   `*_UV_VIS_N.txt` exports.
-2. Set the **detection wavelength**, and for Agilent the **injection volume** if it is not
-   100 microlitres.
-3. Click **Load samples**. Every sample is analysed once and the table fills in.
-4. Click a row, or use **Previous** / **Next**, to inspect one run. The upper plot shows the
-   raw trace, the fitted baseline and the corrected trace. The lower plot shows the corrected
-   trace with the main peak shaded and a metrics box.
-5. The sidebar table lists the top ten peaks with RT, height, area, Area (%), and
-   concentration.
-6. **Download Results CSV** when done.
+The run shown below is a real Agilent batch of four peptide injections and one blank. The
+peptide names are synthetic, so the numbers belong to the sequences on screen rather than to
+anyone's samples.
 
-Nothing leaves your machine.
+**Step 1. Point it at a folder.** Click **Choose folder directory** and pick the folder that
+holds your `.D` folders, or your `*_UV_VIS_N.txt` exports. Pick the folder itself, not one of
+the `.D` folders inside it.
+
+![Choosing the batch folder](man/figures/app-01-choose-folder.png)
+
+**Step 2. Set the wavelength and the injection volume, then load.** 214 nm is the default and
+is the one that works for every peptide. For Agilent, set the injection volume if the method
+is not 100 microlitres, because concentration scales inversely with it. Then click
+**Load samples**: every run is analysed once and the table fills in.
+
+![The batch loaded at 214 nm](man/figures/app-02-batch-214nm.png)
+
+Each row carries the retention time and area of the main peak, the concentration before and
+after the dilution factor, the sequence that was resolved, and a status. The blank is detected
+and used, not listed as a sample.
+
+**Step 3. Inspect one run.** Click a row, or use **Previous** and **Next**. The upper plot
+shows the raw trace, the fitted baseline and the corrected trace, so you can see what the
+baseline correction did rather than trust it. The lower plot shows the corrected trace with
+the integrated peak shaded and the numbers that produced the concentration, including the
+epsilon actually used. The sidebar fills with the top ten peaks and their **Area (%)**.
+
+![One sample, with its chromatogram and peak table](man/figures/app-03-sample-detail.png)
+
+**Step 4. Cross-check at 280 nm, where the peptide allows it.** Switch the wavelength and
+click **Load samples** again. Peptides carrying a tryptophan or a tyrosine are quantified
+through a second, independent chromophore. Peptides carrying neither return `NA (missing ε)`
+and say so in plain words rather than reporting a number that would be meaningless.
+
+![The same batch at 280 nm](man/figures/app-04-batch-280nm.png)
+
+In this batch, `GLNSAMPLEWK` and `GVDEMYPEPTIDER` quantify at both wavelengths;
+`SAMPLEPEPTIDEK` and `TESTPEPTIDEAK` have no 280 nm chromophore at all. That split is not a
+failure, it is the reason 214 nm is the default: only about a third of tryptic peptides carry
+Trp or Tyr.
+
+**Step 5. Download the results.** **Download Results CSV** writes one row per run; the columns
+are listed under [Results CSV columns](#results-csv-columns).
 
 ### Scripted use
 
@@ -357,6 +483,53 @@ differs.
 
 ---
 
+## Worked data cases
+
+Two datasets have been used to test this package against an independent method. Both are
+peptide purity batches measured twice, once by amino acid analysis and once by this package
+from the UV chromatogram.
+
+### Case 1: what a tryptophan does to a 214 nm number
+
+130 injections quantified at both 214 and 280 nm. Because both numbers come from the same
+injection, everything about the sample cancels in their ratio and only the extinction model
+survives. The ratio turned out to depend on one residue and nothing else.
+
+![eps214 recalibration](man/figures/eps214_tryptophan_recalibration.png)
+
+Left panel: the 214-to-280 ratio against tryptophan count, median 1.17 with none, 0.82 with
+one, 0.68 with two, rho = -0.76. Middle: the two channels against each other on the published
+coefficients, tryptophan peptides in orange sitting well off the line. Right: the same data
+after refitting the tryptophan term to 17,340 and scaling the rest by 1.118. R2 goes from 0.68
+to 0.87 and the median absolute difference between channels from 17.3 to 8.1 percent. The
+argument, the intervals and how to change the constants are in
+[Recalibration of eps214](#recalibration-of-eps214).
+
+### Case 2: four batches against amino acid analysis
+
+`aaa_hplc_compare/` holds the earlier comparison: 352 injections across four 2025 batches,
+UV against amino acid analysis, in anonymised form. See
+[its README](aaa_hplc_compare/README.md) for the columns.
+
+| Batch | n | median UV / AAA | R2 | Lin's concordance |
+|---|---|---|---|---|
+| 2025-01 | 52 | 1.16 | 0.17 | 0.34 |
+| 2025-04 | 110 | 1.06 | 0.20 | 0.44 |
+| 2025-05 | 124 | 1.02 | 0.57 | 0.74 |
+| 2025-06 | 66 | 0.94 | 0.64 | 0.80 |
+
+Two things to take from it. **Each batch carries its own scale factor**, spanning 0.94 to 1.16
+here, so agreement should be judged within a batch rather than pooled across batches. And the
+reference is not the fixed point it looks like: **the reported amino acid analysis replicate
+CV in this dataset has a median of 13.5 percent** (interquartile 11.1 to 16.5), which is most
+of the spread you see in `scatter_by_batch.png`. A UV number that sits 15 percent from an AAA
+number is inside the reference method's own noise.
+
+Not one of these four batches contained a tryptophan peptide, which is exactly why the problem
+in case 1 stayed invisible until 2026.
+
+---
+
 ## Behaviour that will surprise you
 
 **At 280 nm the blank is never subtracted, even if you ask for it.**
@@ -508,8 +681,13 @@ that has already been reported. Set it yourself.
   the row carries the error text rather than a number.
 - **The noise estimate is the standard deviation of the first 50 points** of the trace. A run
   whose first 50 points are not baseline will have its detection threshold set wrongly.
-- **No automated tests.** There is no `tests/` directory. Behaviour is verified by re-running
+- **Test coverage is narrow.** `tests/testthat/` covers the extinction coefficient models and
+  the calibration arithmetic, which are the numbers most likely to move. The readers, the
+  baseline paths and the peak detection have no tests; they are verified by re-running
   production batches and comparing results.
+- **The 214 nm coefficients are ours, not the paper's.** Anyone reproducing a published
+  Kuipers and Gruppen number must call `published_epsilon_214()`, not `estimate_epsilon_214()`.
+  See [Recalibration of eps214](#recalibration-of-eps214).
 
 ---
 
@@ -519,10 +697,12 @@ that has already been reported. Set it yourself.
 R/                      package source
 inst/shiny/app/app.R    the Shiny front end, launched by run_hplc_app()
 man/                    roxygen-generated help pages
+man/figures/            screenshots and the calibration figure used by this README
+tests/testthat/         tests for the extinction models and the calibration
 install.R               dependency and package installer for a fresh clone
 INSTALL.md              step by step install guide for users new to R
 NEWS.md                 version history
-aaa_hplc_compare/       amino acid analysis versus UV-HPLC comparison outputs
+aaa_hplc_compare/       amino acid analysis versus UV-HPLC comparison, anonymised
 peptide-calculator/     an Electron desktop peptide calculator, separate from the R package
 ```
 
@@ -531,23 +711,72 @@ peptide-calculator/     an Electron desktop peptide calculator, separate from th
 
 ---
 
+## References
+
+**The absorptivity models**
+
+1. Kuipers, B. J. H. and Gruppen, H. (2007). Prediction of molar extinction coefficients of
+   proteins and peptides using UV absorption of the constituent amino acids at 214 nm to
+   enable quantitative reverse phase high-performance liquid chromatography-mass spectrometry
+   analysis. *Journal of Agricultural and Food Chemistry* **55**(14), 5445-5451.
+   [doi:10.1021/jf070337l](https://doi.org/10.1021/jf070337l)
+   Source of the additive 214 nm model in `published_epsilon_214()`: 923 per peptide bond,
+   2675 per non-N-terminal proline, the per-residue table, and the four special tripeptides.
+   Measured in acetonitrile and formic acid, which is why it suits RP-HPLC eluent.
+
+2. Pace, C. N., Vajdos, F., Fee, L., Grimsley, G. and Gray, T. (1995). How to measure and
+   predict the molar absorption coefficient of a protein. *Protein Science* **4**(11),
+   2411-2423. [doi:10.1002/pro.5560041120](https://doi.org/10.1002/pro.5560041120)
+   Source of `estimate_epsilon_280()`: 5500 per Trp and 1490 per Tyr. The 125 per disulfide
+   is deliberately not implemented, because the disulfide state of a purity peptide is
+   unknown and the term is about 2 percent of a single tryptophan.
+
+3. Edelhoch, H. (1967). Spectroscopic determination of tryptophan and tyrosine in proteins.
+   *Biochemistry* **6**(7), 1948-1954.
+   [doi:10.1021/bi00859a010](https://doi.org/10.1021/bi00859a010)
+   The original method that Pace and colleagues revised.
+
+**The signal processing**
+
+4. Eilers, P. H. C. and Boelens, H. F. M. (2005). Baseline correction with asymmetric least
+   squares smoothing. Leiden University Medical Centre report.
+   The ALS baseline behind `baseline_als()` and `baseline_hybrid_sm()`.
+
+5. Savitzky, A. and Golay, M. J. E. (1964). Smoothing and differentiation of data by
+   simplified least squares procedures. *Analytical Chemistry* **36**(8), 1627-1639.
+   [doi:10.1021/ac60214a047](https://doi.org/10.1021/ac60214a047)
+   The smoother `detect_peaks_on_smoothed()` applies before peak picking.
+
+6. Bland, J. M. and Altman, D. G. (1986). Statistical methods for assessing agreement between
+   two methods of clinical measurement. *The Lancet* **327**(8476), 307-310.
+   [doi:10.1016/S0140-6736(86)90837-8](https://doi.org/10.1016/S0140-6736%2886%2990837-8)
+   The difference plots in `aaa_hplc_compare/`.
+
+7. Linnet, K. (1993). Evaluation of regression procedures for methods comparison studies.
+   *Clinical Chemistry* **39**(3), 424-432.
+   Why the calibration in [Recalibration of eps214](#recalibration-of-eps214) is fitted with
+   errors allowed in both methods rather than by ordinary least squares.
+
+**The R packages this leans on**
+
+`chromConverter` reads the instrument files, `baseline` provides the ALS implementation,
+`pracma` the peak finder and the trapezoidal integration, `signal` the Savitzky-Golay filter,
+and `shiny`, `shinyFiles` and `DT` the front end. Run `citation("chromConverter")` and so on
+for their preferred citations.
+
+---
+
 ## License and citation
 
 GPL-3. Copyright Peter Kubiniok.
 
-If you use hplcAnalyzer, please cite the two methods it implements alongside the software:
-
-> Kuipers, B. J. H. and Gruppen, H. (2007). Prediction of molar extinction coefficients of
-> proteins and peptides using UV absorption of the constituent amino acids at 214 nm to enable
-> quantitative reverse phase high-performance liquid chromatography-mass spectrometry analysis.
-> *Journal of Agricultural and Food Chemistry* **55**(14), 5445-5451.
-> doi:10.1021/jf070337l
-
-> Pace, C. N., Vajdos, F., Fee, L., Grimsley, G. and Gray, T. (1995). How to measure and
-> predict the molar absorption coefficient of a protein. *Protein Science* **4**(11),
-> 2411-2423. doi:10.1002/pro.5560041120
+If you use hplcAnalyzer, cite the software together with references 1 and 2 above:
 
 > Kubiniok, P. (2026). hplcAnalyzer: automated HPLC-UV analysis and peptide concentration
-> estimation. R package version 0.3.2.
+> estimation. R package version 0.4.0.
+
+If you report a 214 nm concentration from it, say which coefficients you used. The shipped
+`estimate_epsilon_214()` is **not** the published Kuipers and Gruppen value for tryptophan;
+see [Recalibration of eps214](#recalibration-of-eps214).
 
 Contact: Peter Kubiniok, peterkubiniok@gmail.com

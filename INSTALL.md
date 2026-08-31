@@ -37,11 +37,11 @@ install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot
 Then install the package itself, using the full path to the file you were sent:
 
 ```r
-install.packages("C:/Users/you/Downloads/hplcAnalyzer_0.3.2.tar.gz",
+install.packages("C:/Users/you/Downloads/hplcAnalyzer_0.4.0.tar.gz",
                  repos = NULL, type = "source")
 ```
 
-On macOS the path looks like `/Users/you/Downloads/hplcAnalyzer_0.3.2.tar.gz`. Use forward
+On macOS the path looks like `/Users/you/Downloads/hplcAnalyzer_0.4.0.tar.gz`. Use forward
 slashes on every platform, including Windows.
 
 ### B. You have a git checkout
@@ -62,7 +62,7 @@ source("install.R")
 
 ### C. Straight from GitHub
 
-The repository is private, so this needs a GitHub personal access token with the `repo`
+While the repository is private, this needs a GitHub personal access token with the `repo`
 scope. Put `GITHUB_PAT=ghp_...` in your `~/.Renviron` file, restart R, then:
 
 ```r
