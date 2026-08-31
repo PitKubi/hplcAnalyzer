@@ -305,10 +305,9 @@ the rest, and they are the point of the exercise.
 reinstall. `tests/testthat/test-estimate_epsilon_214.R` pins the published model separately, so
 it keeps passing either way.
 
-The figure above was produced by
-`~/Documents/project_workspaces/hplcanalyzer/analysis_aaa_vs_uv_20260831/plot_repository_figure.py`,
-which also holds the full 20-slide analysis it is drawn from. The source data are collaborator
-purity batches and are deliberately not in this repository.
+The source data are a collaborator's purity batches and are deliberately not in this
+repository. The 2025 batches in `aaa_hplc_compare/` are the same comparison run earlier, kept
+here in anonymised form; see the README in that folder.
 
 ### Molar absorptivity at 280 nm
 

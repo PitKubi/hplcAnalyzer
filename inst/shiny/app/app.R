@@ -230,7 +230,6 @@ server <- function(input, output, session) {
   ## --- Helpers for mapping sequences from the uploaded CSV --------------------
 
   # Pull an MRMP id like "MRMP-00000001-001" out of a filename/folder name
-  # -- Pull an MRMP id like "MRMP-00000001-001" out of a filename/folder name
   extract_mrmp_id <- function(x) {
     m <- regexpr("MRMP[-_]?\\d{8}[-_]?\\d{3}", x, ignore.case = TRUE)
     if (m[1] == -1) return(NA_character_)

@@ -36,3 +36,6 @@ peptide-calculator/out/
 
 # Claude session scratch
 .claude/
+
+# LibreOffice lock files
+.~lock.*#
