@@ -549,9 +549,10 @@ fitted baseline lift into the main peak instead of passing under it, and the eff
 
 The orange line joins the peak's own two feet, which is the classical valley-to-valley
 baseline. Anything the fitted baseline does above that line is area taken out of the peak. On
-the left, at the shipped setting, it lifts into a hump of about 40 mAU directly under the peak
+the left, at the shipped default, it lifts into a hump of about 40 mAU directly under the peak
 while the true local baseline either side is 25. On the right is what lambda 5.5 with p 1e-6
-does instead: flat at 27, straight under the peak.
+does instead: flat at 27, straight under the peak. Same run, same peak; only the two baseline
+parameters differ.
 
 Measured across 47 runs of a production batch, the shipped setting puts the fitted baseline
 above the foot-to-foot line at the apex on **23 percent of runs**. At lambda 5.5, p 1e-6 that
