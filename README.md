@@ -9,7 +9,7 @@ the peaks, and converts the main peak area to molarity using a molar absorptivit
 from the peptide sequence. Everything runs locally, either from the R console or from a Shiny
 app aimed at bench chemists rather than R programmers.
 
-Version 0.5.2. See [NEWS.md](NEWS.md) for the version history.
+Version 0.5.3. See [NEWS.md](NEWS.md) for the version history.
 
 ![The app with a batch loaded](man/figures/app-03-sample-detail.png)
 
@@ -183,13 +183,13 @@ cd hplc_analyzer
 R CMD build .
 ```
 
-That writes `hplcAnalyzer_0.5.2.tar.gz`. Send that file. The recipient installs the CRAN
+That writes `hplcAnalyzer_0.5.3.tar.gz`. Send that file. The recipient installs the CRAN
 dependencies once and then the tarball:
 
 ```r
 install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot2",
                    "gridExtra","shiny","shinyFiles","fs","DT","tibble","xml2","magrittr"))
-install.packages("C:/path/to/hplcAnalyzer_0.5.2.tar.gz", repos = NULL, type = "source")
+install.packages("C:/path/to/hplcAnalyzer_0.5.3.tar.gz", repos = NULL, type = "source")
 ```
 
 On Windows, close and reopen R before installing over an existing version. A loaded package
@@ -259,9 +259,9 @@ In this batch, `SAMPLEWK`, `SAMPLEWWK` and `SAMPLEPEPTIDEY` quantify at both wav
 `TESTPEPTIDEK` has no 280 nm chromophore at all and returns `NA (missing eps)`. That is not a
 failure, it is the reason 214 nm is the default: only about a third of tryptic peptides carry
 Trp or Tyr. Note also how much smaller the 280 nm signal is, and how much it depends on what
-the peptide carries: on the same four injections the main peak area at 280 nm is 43.96, 114.38,
-7.52 and 0.06 mAU-min against 220.87, 438.79, 124.86 and 172.00 at 214 nm. Two tryptophans
-give a usable 280 nm peak; a single tyrosine gives one twenty times smaller.
+the peptide carries: on the same four injections the main peak area at 280 nm is 42.59, 110.73,
+7.09 and 0.02 mAU-min against 211.46, 421.61, 119.15 and 165.46 at 214 nm. Two tryptophans
+give a usable 280 nm peak; a single tyrosine gives one seventeen times smaller.
 
 **Step 5. Download the results.** **Download Results CSV** writes one row per run; the columns
 are listed under [Results CSV columns](#results-csv-columns).
@@ -540,31 +540,39 @@ in case 1 stayed invisible until 2026.
 
 ## Behaviour that will surprise you
 
-### The baseline is tuned to pass under the peak, not through it
+### The global baseline can rise into the peak
 
-The global ALS baseline runs at **lambda 5.5, p 1e-6**. Those two numbers were tuned together
-by looking at the fit through the main peak on 20 runs, not by eye on one:
+The global ALS baseline ships at **lambda 4.0, p 1e-4**. Those values are known to let the
+fitted baseline lift into the main peak instead of passing under it, and the effect is not rare.
 
-![baseline tuning check](man/figures/baseline_tuning_check.png)
+![baseline check](man/figures/baseline_tuning_check.png)
 
 The orange line joins the peak's own two feet, which is the classical valley-to-valley
-baseline. Anything the fitted baseline does above that line is area taken out of the peak.
+baseline. Anything the fitted baseline does above that line is area taken out of the peak. On
+the left, at the shipped setting, it lifts into a hump of about 40 mAU directly under the peak
+while the true local baseline either side is 25. On the right is what lambda 5.5 with p 1e-6
+does instead: flat at 27, straight under the peak.
 
-On the left, at the original setting, the fitted baseline lifts into a hump of about 40 mAU
-directly under the peak while the true local baseline either side is 25. That is the clipping.
-On the right, at what ships now, it runs flat at 27 straight under the peak.
+Measured across 47 runs of a production batch, the shipped setting puts the fitted baseline
+above the foot-to-foot line at the apex on **23 percent of runs**. At lambda 5.5, p 1e-6 that
+falls to **none of them**, with a maximum excess anywhere inside a peak of -11.6 mAU, so the
+baseline is strictly below the foot line everywhere. The cost is that every 214 nm area rises
+by about 8 percent, which moves every concentration this package has ever reported, so the
+shipped values are deliberately left where they are.
 
-Measured across 47 runs of a production batch: at the original setting the fitted baseline sits
-above the foot-to-foot line at the apex on **23 percent of runs**; at the shipped setting, on
-**none of them**, and its maximum excess anywhere inside a peak is -11.6 mAU, so it is strictly
-below the foot line everywhere. Stiffening lambda alone would also stop the clipping but pays
-for it elsewhere: the corrected trace then needs 9.6 min to settle back to zero after the
-injector rather than 6.5, and sits 1.6 mAU off zero between peaks rather than 0.6. Lowering p
-is what fixes the peak without that cost.
+**If you want the tighter baseline**, pass it explicitly:
 
-Both are exposed as `sample_als_lambda` and `sample_als_p` on the scripted interface if a
-method needs something else. The piecewise baseline on the blank-subtracting path has its own
-pair, `hybrid_als_lambda` and `hybrid_als_p`.
+```r
+run_hplc_analysis_agilent(..., sample_als_lambda = 5.5, sample_als_p = 1e-6)
+```
+
+Raising lambda alone also removes the clipping but costs elsewhere: at lambda 6.5 with p left
+at 1e-4 the corrected trace needs 9.6 min to settle back to zero after the injector rather than
+6.5, and sits 1.6 mAU off zero between peaks rather than 0.6. p is the parameter that decides
+how hard the fit is pushed under the data, so it is the one that keeps a baseline off a peak.
+
+The piecewise baseline on the blank-subtracting path has its own pair, `hybrid_als_lambda` and
+`hybrid_als_p`, and has always run at 6.5.
 
 ### How the integration window is chosen
 
@@ -755,6 +763,10 @@ that has already been reported. Set it yourself.
 - **The hybrid baseline path can fail on individual runs.** One of 58 runs in the batch tested
   errors inside `baseline_hybrid_sm()` with `invalid 'times' argument`. The app catches it, and
   the row carries the error text rather than a number.
+- **The global ALS baseline rises into the main peak on about a quarter of runs** at the
+  shipped `sample_als_lambda = 4.0`, `sample_als_p = 1e-4`, taking area out of it. Measured, and
+  fixable per call, but not changed by default because it would move every number this package
+  has reported. See [the global baseline can rise into the peak](#the-global-baseline-can-rise-into-the-peak).
 - **The integration window stops at a fused shoulder**, so on a peak with an unresolved
   neighbour the shaded region starts partway up the flank rather than at baseline. That is a
   perpendicular drop and it is deliberate, but no parameter adjusts it. See
@@ -857,7 +869,7 @@ GPL-3. Copyright Peter Kubiniok.
 If you use hplcAnalyzer, cite the software together with references 1 and 2 above:
 
 > Kubiniok, P. (2026). hplcAnalyzer: automated HPLC-UV analysis and peptide concentration
-> estimation. R package version 0.5.2.
+> estimation. R package version 0.5.3.
 
 If you report a 214 nm concentration from it, say which coefficients you used. The shipped
 `estimate_epsilon_214()` is **not** the published Kuipers and Gruppen value for tryptophan;

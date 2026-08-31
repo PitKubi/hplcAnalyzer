@@ -1,3 +1,20 @@
+# hplcAnalyzer 0.5.3
+
+* **The ALS baseline parameters are reverted to the shipped 4.0 and 1e-4**, on Peter Kubiniok's
+  decision, after 0.5.0 and 0.5.1 moved them to 5.5 and 1e-6. Every 214 nm area and
+  concentration goes back to what 0.4.x reported.
+
+  The measurement that prompted the change stands and is now documented as a known issue rather
+  than acted on: across 47 runs of a production batch the fitted baseline sits above the peak's
+  own foot-to-foot line at the apex on **23 percent of them**, which is area taken out of the
+  peak. At lambda 5.5 with p 1e-6 that falls to none of them. The cost of adopting it is about
+  **8 percent on every 214 nm area**, which moves every number this package has reported, and
+  that was judged not worth it as a default. Both are arguments on
+  `run_hplc_analysis_agilent()` for anyone who wants the tighter baseline on a given batch.
+
+  See the README, "The global baseline can rise into the peak", which carries the figure and
+  the numbers.
+
 # hplcAnalyzer 0.5.2
 
 * **Documented how the integration window is chosen**, after the shaded region in the peak plot

@@ -3,20 +3,15 @@
 #' @param sample_d_path Path to sample .D folder.
 #' @param blank_d_path  Path to blank .D folder or NULL.
 #' @param peptide_sequence Character. Peptide one-letter code.
-#' @param sample_als_lambda Numeric. λ for global ALS baseline. Default 5.5.
-#'   λ is stiffness and `sample_als_p` is how hard the fit is pushed under the data. The two were
-#'   tuned together on 20 runs, measuring how far the fitted baseline climbs above its own level
-#'   1.5 min either side of the peak apex. At the old 4.0 with p = 1e-4 the median climb was
-#'   10.0 mAU, the baseline riding up into the peak and taking area with it. Raising λ alone
-#'   helps the peak but over-stiffens elsewhere: at λ = 6.5, p = 1e-4 the corrected trace needs
-#'   9.6 min to settle back to zero after the injector instead of 6.7. Lowering p is the better
-#'   lever. At λ = 5.5, p = 1e-6 the median climb is 1.1 mAU, the lowest of the grid tested, the
-#'   trace settles in 6.5 min and sits within 0.6 mAU of zero between peaks.
-#' @param sample_als_p Numeric. p for global ALS baseline. Default 1e-6. See
-#'   `sample_als_lambda`; the two are tuned as a pair and p is the one that keeps the baseline
-#'   under the peak.
-#' @param use_hybrid Logical. If TRUE, run hybrid baseline (requires blank). Default FALSE.
-#'   Ignored at signal_wavelength = 280, which always takes the ALS only path.
+#' @param sample_als_lambda Numeric. λ for global ALS baseline. Default 4.0.
+#' @param sample_als_p Numeric. p for global ALS baseline. Default 1e-4.
+#'   These two are the shipped values and they are known to let the fitted baseline rise into
+#'   the main peak: measured across 47 runs of a production batch, the baseline sits above the
+#'   peak's own foot-to-foot line at the apex on 23 percent of them, by a median of 10 mAU at
+#'   the apex where it happens, which is area taken out of the peak. λ = 5.5 with p = 1e-6 was
+#'   measured to remove it on all 47, at the cost of raising every 214 nm area by about 8
+#'   percent, and was not adopted. Pass either argument if you want that behaviour on a
+#'   particular batch. See the README, "The global baseline can rise into the peak".
 #' @param hybrid_als_lambda Numeric. λ for piecewise ALS. Default 6.5.
 #' @param hybrid_als_p Numeric. p for piecewise ALS. Default 1e-4.
 #' @param pre_win Integer. SG window for hybrid pre-smoothing. Default 7.
@@ -40,8 +35,8 @@ run_hplc_analysis_agilent <- function(
     sample_d_path,
     blank_d_path             = NULL,
     peptide_sequence,
-    sample_als_lambda        = 5.5,
-    sample_als_p             = 1e-6,
+    sample_als_lambda        = 4.0,
+    sample_als_p             = 1e-4,
     use_hybrid               = FALSE,
     hybrid_als_lambda        = 6.5,
     hybrid_als_p             = 1e-4,
