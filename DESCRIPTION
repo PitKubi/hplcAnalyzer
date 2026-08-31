@@ -3,9 +3,9 @@ Type: Package
 Title: Automated HPLC-UV Analysis and peptide concentration estimation
 Version: 0.3.2
 Author: Peter Kubiniok
-Maintainer: Peter Kubiniok <peterkubiniok@gmail.com>
+Maintainer: Peter Kubiniok <peterkubiniok@quantivum.com>
 Authors@R: 
-    person("Peter", "Kubiniok", email = "peterkubiniok@gmail.com",
+    person("Peter", "Kubiniok", email = "peterkubiniok@quantivum.com",
            role = c("aut", "cre"))
 Description: Read Agilent .D folders or thermo UV data exports (.txt), perform baseline correction if needed,
     detect peaks, compute concentrations, estimate peptide sequence‐specific ε214 (Kuipers & Gruppen, 2007) molar absorbtion constants and  generateplot results.
