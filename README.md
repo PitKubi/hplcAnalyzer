@@ -214,9 +214,11 @@ run_hplc_app()
 The app opens in your browser. Nothing leaves your machine: there is no upload, no account and
 no network call anywhere in the package.
 
-The run shown below is a real Agilent batch of four peptide injections and one blank. The
-peptide names are synthetic, so the numbers belong to the sequences on screen rather than to
-anyone's samples.
+The run shown below is a real Agilent batch of four peptide injections. The peptide names are
+synthetic, so the numbers belong to the sequences on screen rather than to anyone's samples.
+There is no blank in this folder, so the screenshots show the plain ALS baseline path; see
+[the blank-subtracting path leaves an injector artefact](#the-blank-subtracting-path-leaves-an-injector-artefact)
+for what changes when a blank is present.
 
 **Step 1. Point it at a folder.** Click **Choose folder directory** and pick the folder that
 holds your `.D` folders, or your `*_UV_VIS_N.txt` exports. Pick the folder itself, not one of
@@ -232,8 +234,8 @@ is not 100 microlitres, because concentration scales inversely with it. Then cli
 ![The batch loaded at 214 nm](man/figures/app-02-batch-214nm.png)
 
 Each row carries the retention time and area of the main peak, the concentration before and
-after the dilution factor, the sequence that was resolved, and a status. The blank is detected
-and used, not listed as a sample.
+after the dilution factor, the sequence that was resolved, and a status. A blank, if one is
+present in the folder, is detected and used rather than listed as a sample.
 
 **Step 3. Inspect one run.** Click a row, or use **Previous** and **Next**. The upper plot
 shows the raw trace, the fitted baseline and the corrected trace, so you can see what the
@@ -250,10 +252,10 @@ and say so in plain words rather than reporting a number that would be meaningle
 
 ![The same batch at 280 nm](man/figures/app-04-batch-280nm.png)
 
-In this batch, `GLNSAMPLEWK` and `GVDEMYPEPTIDER` quantify at both wavelengths;
-`SAMPLEPEPTIDEK` and `TESTPEPTIDEAK` have no 280 nm chromophore at all. That split is not a
-failure, it is the reason 214 nm is the default: only about a third of tryptic peptides carry
-Trp or Tyr.
+In this batch, `SAMPLEYK` and `SAMPLEWK` quantify at both wavelengths; `TESTPEPTIDEK` and
+`PEPTIDESAMPLE` have no 280 nm chromophore at all. That split is not a failure, it is the
+reason 214 nm is the default: only about a third of tryptic peptides carry Trp or Tyr. Note how
+much smaller the 280 nm signal is, 38.8 mAU against 702.8 at 214 nm on the same injection.
 
 **Step 5. Download the results.** **Download Results CSV** writes one row per run; the columns
 are listed under [Results CSV columns](#results-csv-columns).
@@ -532,6 +534,25 @@ in case 1 stayed invisible until 2026.
 
 ## Behaviour that will surprise you
 
+### The blank-subtracting path leaves an injector artefact
+
+At 214 nm, when a blank is present in the folder, the app takes the blank-subtracting hybrid
+path. That path leaves a **negative excursion of about -317 mAU at 3.28 minutes**, and it is
+the same size and at the same time in every run: measured across a production batch it varies
+by less than 2 mAU. It is the blank's own injector peak, over-subtracted, and the one minute
+guard ramp in `align_subtract_then_hybrid()` does not reach it. Without a blank, the plain ALS
+path leaves **-1.6 mAU** in the same place.
+
+It does not corrupt the reported concentration, because it sits well before the analyte window
+that `min_rt_frac` opens at 30 percent of the run, and no peak is picked there. But the two
+paths do not agree: on three runs the hybrid path returned 92.9, 44.8 and 91.5 uM where ALS
+returned 88.6, 39.0 and 79.5, so a difference of 5 to 15 percent, and it is the hybrid number
+that is biased high against hand integration (see the 280 nm entry below).
+
+If a chromatogram in your batch opens with a deep dip just after the injector, that is this,
+not your sample. Removing the blank from the folder, or calling
+`run_hplc_analysis_agilent(..., use_hybrid = FALSE)`, avoids it.
+
 **At 280 nm the blank is never subtracted, even if you ask for it.**
 `run_hplc_analysis_agilent()` computes `use_hybrid && signal_wavelength != 280`, so an explicit
 `use_hybrid = TRUE` is overridden at 280 nm. The reason is that there is nothing there to
@@ -679,6 +700,10 @@ that has already been reported. Set it yourself.
 - **The hybrid baseline path can fail on individual runs.** One of 58 runs in the batch tested
   errors inside `baseline_hybrid_sm()` with `invalid 'times' argument`. The app catches it, and
   the row carries the error text rather than a number.
+- **The hybrid baseline path over-subtracts the injector peak**, leaving a constant -317 mAU
+  artefact at 3.28 min that the guard ramp does not cover, and returns concentrations 5 to 15
+  percent different from the ALS path on the same runs. See
+  [the blank-subtracting path leaves an injector artefact](#the-blank-subtracting-path-leaves-an-injector-artefact).
 - **The noise estimate is the standard deviation of the first 50 points** of the trace. A run
   whose first 50 points are not baseline will have its detection threshold set wrongly.
 - **Test coverage is narrow.** `tests/testthat/` covers the extinction coefficient models and
