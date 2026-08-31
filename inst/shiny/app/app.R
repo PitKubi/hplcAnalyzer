@@ -37,7 +37,7 @@ ui <- fluidPage(
       radioButtons(
         "wavelength",
         "Detection wavelength / ε formula:",
-        choices  = c("214 nm (Kuipers & Gruppen)" = 214,
+        choices  = c("214 nm (Kuipers & Gruppen, recalibrated)" = 214,
                      "280 nm (Edelhoch)"          = 280),
         selected = 214,
         inline   = TRUE

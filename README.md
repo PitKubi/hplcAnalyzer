@@ -197,7 +197,12 @@ Both pipelines run the same steps in the same order.
 
 ### Molar absorptivity at 214 nm
 
-`estimate_epsilon_214()` implements the additive residue model of
+Two functions cover 214 nm. `published_epsilon_214()` is the literature model, untouched.
+`estimate_epsilon_214()` is what the pipelines and the app actually call, and it applies a
+recalibration measured on our own data; see [Recalibration of eps214](#recalibration-of-eps214)
+below for what changed, why, and how to change it back.
+
+`published_epsilon_214()` implements the additive residue model of
 
 > Kuipers, B. J. H. and Gruppen, H. (2007). Prediction of molar extinction coefficients of
 > proteins and peptides using UV absorption of the constituent amino acids at 214 nm to enable
@@ -214,17 +219,96 @@ term by term rather than from aromatic residues alone:
 
   | Residue | eps | Residue | eps | Residue | eps | Residue | eps |
   |---|---|---|---|---|---|---|---|
-  | W | 29050 | H | 5125 | N | 136 | K | 41 |
+  | W | 29050* | H | 5125 | N | 136 | K | 41 |
   | Y | 5375 | M | 980 | C | 225 | T | 41 |
   | F | 5200 | R | 102 | G | 21 | E | 78 |
   | Q | 142 | V | 43 | I | 45 | L | 45 |
   | A | 32 | S | 34 | D | 58 | | |
 
-- Four tripeptides are special-cased to the measured values from the paper's Table 3 and
-  bypass the additive model entirely: GGG 1080, GPG 3620, PGG 950, GGP 3880.
+  \* Tryptophan is the one value `estimate_epsilon_214()` does not use as printed. See
+  [Recalibration of eps214](#recalibration-of-eps214).
 
-The function returns `NA` for anything that is not a string of the twenty standard one-letter
+- Four tripeptides are special-cased to the measured values from the paper's Table 3 and
+  bypass the additive model entirely: GGG 1080, GPG 3620, PGG 950, GGP 3880. They carry no
+  tryptophan, so the recalibration scales them like any other tryptophan-free peptide.
+
+Both functions return `NA` for anything that is not a string of the twenty standard one-letter
 codes, so blanks, washes and unresolved sequences fall through cleanly.
+
+### Recalibration of eps214
+
+**The tryptophan term shipped here is not the published one.** `estimate_epsilon_214()` returns
+
+```
+NON_TRYPTOPHAN_EPSILON_214_SCALE * (published - 29050 * nTrp)  +  MEASURED_TRYPTOPHAN_EPSILON_214 * nTrp
+```
+
+with `MEASURED_TRYPTOPHAN_EPSILON_214 = 17340` and `NON_TRYPTOPHAN_EPSILON_214_SCALE = 1.118`.
+Both constants sit at the top of `R/estimate_epsilon_214.R`, and the same two numbers appear in
+`peptide-calculator/src/calculations.js`. Change them together or the desktop calculator and the
+Shiny app will disagree.
+
+![eps214 recalibration](man/figures/eps214_tryptophan_recalibration.png)
+
+**Where the numbers come from.** A peptide measured at both 214 and 280 nm gives two independent
+concentrations from one injection, so sample amount, dilution and any whole-batch offset cancel in
+their ratio and what is left is the extinction model. On 130 such injections that ratio tracks
+tryptophan and nothing else, at rho = -0.76, p < 1e-13: median 1.17 with no tryptophan, 0.82 with
+one, 0.68 with two. Tyrosine, phenylalanine, histidine, methionine and peptide length add nothing.
+
+A reported concentration is inversely proportional to the extinction coefficient used, so the
+coefficient a peptide would have needed is its published value times that ratio. Fitting one
+replacement tryptophan term and one scale on everything else, by least squares over the 71
+injections passing an 80 percent purity gate, with a 4000-draw bootstrap:
+
+| Parameter | Fitted | 95 % CI | Published |
+|---|---|---|---|
+| eps214 tryptophan | 17,340 | 14,519 to 19,569 | 29,050 |
+| scale on the rest | 1.118 | 1.01 to 1.26 | 1 |
+
+Tyrosine and phenylalanine, freed in the same fit, come back at 5,080 and 3,813 with intervals
+covering their published 5,375 and 5,200, so they are left alone.
+
+**Why it is believable.** Fitting each batch separately gives 15,300 and 18,200 for the tryptophan
+term, so it is not one batch misbehaving. Amino acid analysis, which is not used in the fit at all,
+agrees independently: tryptophan drags the 214 nm channel away from it while the 280 nm channel
+stays put. And the correction closes that gap too, from 26 to 11 percentage points in one batch and
+20 to 7 in the other.
+
+**What it buys.** Across the 130 injections, 214 nm against 280 nm improves from R2 0.68 to 0.87,
+and the median absolute difference between the two channels, as a percentage of the mean of the
+pair, from 17.3 to 8.1 percent. Those are the numbers the shipped constants actually produce, not
+the unrounded fit.
+
+**The scale is the soft number.** The tryptophan term is well determined and its interval is
+nowhere near 29,050. The 1.118 scale is not: its interval nearly touches 1, and anchored on amino
+acid analysis instead, using the 170 tryptophan-free peptides of a clean batch, it comes out 1.078.
+Treat 1.08 to 1.12 as the range and set it from a batch you trust. Shipping 1 instead of 1.118
+leaves the two channels 15 percent apart, so it is not a safe default; the two parameters belong
+together.
+
+**What changes in your numbers.** Concentrations move as `published / calibrated`:
+
+| Peptide | Trp | Published eps | Calibrated eps | Reported concentration |
+|---|---|---|---|---|
+| `DIAAYIK` | 0 | 11,166 | 12,484 | 10.6 % lower |
+| `GSEMVVAGK` | 0 | 8,677 | 9,701 | 10.6 % lower |
+| `INEWLTK` | 1 | 34,974 | 23,963 | 45.9 % higher |
+| `AWVNQLETQTGEASK` | 1 | 42,878 | 32,800 | 30.7 % higher |
+
+Every tryptophan-free peptide moves by the same 10.6 percent, so purity, `Area (%)` and any
+ratio between peptides in one run are unaffected. Only tryptophan peptides change relative to
+the rest, and they are the point of the exercise.
+
+**To go back to the literature model**, either call `published_epsilon_214()` directly, or set
+`MEASURED_TRYPTOPHAN_EPSILON_214 <- 29050` and `NON_TRYPTOPHAN_EPSILON_214_SCALE <- 1` and
+reinstall. `tests/testthat/test-estimate_epsilon_214.R` pins the published model separately, so
+it keeps passing either way.
+
+The figure above was produced by
+`~/Documents/project_workspaces/hplcanalyzer/analysis_aaa_vs_uv_20260831/plot_repository_figure.py`,
+which also holds the full 20-slide analysis it is drawn from. The source data are collaborator
+purity batches and are deliberately not in this repository.
 
 ### Molar absorptivity at 280 nm
 

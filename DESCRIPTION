@@ -1,14 +1,16 @@
 Package: hplcAnalyzer
 Type: Package
 Title: Automated HPLC-UV Analysis and peptide concentration estimation
-Version: 0.3.2
+Version: 0.4.0
 Author: Peter Kubiniok
 Maintainer: Peter Kubiniok <peterkubiniok@quantivum.com>
 Authors@R: 
     person("Peter", "Kubiniok", email = "peterkubiniok@quantivum.com",
            role = c("aut", "cre"))
 Description: Read Agilent .D folders or thermo UV data exports (.txt), perform baseline correction if needed,
-    detect peaks, compute concentrations, estimate peptide sequence‐specific ε214 (Kuipers & Gruppen, 2007) molar absorbtion constants and  generateplot results.
+    detect peaks, compute concentrations, estimate peptide sequence-specific molar absorptivity at 214 nm (Kuipers & Gruppen, 2007,
+    with the tryptophan term and a global scale recalibrated on measured 214/280 nm data) and at
+    280 nm (Pace et al., 1995), and generate plot results.
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
@@ -28,4 +30,6 @@ Imports:
     tibble,
     xml2,
     magrittr
-RoxygenNote: 7.3.2
+Suggests:
+    testthat (>= 3.0.0)
+Config/roxygen2/version: 8.1.0

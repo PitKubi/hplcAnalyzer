@@ -1,3 +1,44 @@
+# hplcAnalyzer 0.4.0
+
+* **The 214 nm tryptophan extinction coefficient is recalibrated, from the published 29,050
+  to a measured 17,340, together with a 1.118 scale on the rest of eps214.** This changes
+  every concentration the package reports at 214 nm. Tryptophan-free peptides read 10.6
+  percent lower; tryptophan peptides read 30 to 46 percent higher. Purity, `Area (%)` and any
+  ratio between peptides within one run are unaffected, because the tryptophan-free shift is
+  a single common factor.
+
+  A peptide measured at both wavelengths gives two concentrations from one injection, so
+  amount and batch offset cancel in their ratio and only the extinction model is left. On 130
+  such injections that ratio tracks tryptophan and nothing else (rho -0.76, p < 1e-13): median
+  1.17 with no Trp, 0.82 with one, 0.68 with two. Fitted on the 71 injections passing an 80
+  percent purity gate, bootstrapped 4000 times, the tryptophan term comes out 17,340 (95 % CI
+  14,519 to 19,569) and the scale on everything else 1.118 (95 % CI 1.01 to 1.26). Tyrosine
+  and phenylalanine, freed in the same fit, return to their published values and are unchanged.
+  Fitting each batch alone gives 15,300 and 18,200, and amino acid analysis, which is not in
+  the fit, agrees independently. Across the 130 injections, 214 against 280 nm improves from
+  R2 0.68 to 0.87 and the median absolute difference between the channels, as a percentage of
+  the mean of the pair, from 17.3 to 8.1 percent.
+
+  The scale of 1.118 is the soft half of the pair. Anchored on amino acid analysis instead it
+  is 1.078, so 1.08 to 1.12 is the honest range and it should be set from a batch you trust.
+  Shipping 1 is not a safe middle ground: it leaves the channels 15 percent apart. Both
+  constants are named at the top of `R/estimate_epsilon_214.R`, and the same pair is repeated
+  in `peptide-calculator/src/calculations.js`. See the README section "Recalibration of
+  eps214" for the figure and the full argument.
+
+* **New exported function `published_epsilon_214()`**, the Kuipers and Gruppen model exactly as
+  printed, with no correction. `estimate_epsilon_214()` now builds on it. Keeping the two apart
+  means the correction is visible and revertible without disturbing the published model.
+
+* **First tests in this package**, `tests/testthat/`, pinning the published values, the proline
+  rule, the special tripeptides, the NA behaviour and the calibration arithmetic. The two
+  calibration constants are expected to be revisited, so a change to either now shows up as a
+  deliberate edit to a test rather than as silently different concentrations.
+
+* The wavelength selector in the Shiny app and the two references in the desktop calculator now
+  say the 214 nm model is recalibrated, so a user reading the screen is not told it is the
+  published one.
+
 # hplcAnalyzer 0.3.2
 
 * **Maximum analyte retention time.** A new `max_rt_frac` argument on

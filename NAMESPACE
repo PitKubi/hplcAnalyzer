@@ -15,6 +15,7 @@ export(peak_area_percent)
 export(peptide_sequence_from_chemstation_sample_name)
 export(peptide_sequence_from_sample_xml)
 export(plot_largest_peak)
+export(published_epsilon_214)
 export(read_chemstation_sample_name)
 export(read_hplc_agilent)
 export(read_hplc_thermo)
@@ -33,7 +34,9 @@ import(signal)
 importFrom(magrittr,"%>%")
 importFrom(pracma,findpeaks)
 importFrom(signal,sgolayfilt)
-importFrom(stats,approx)
-importFrom(stats,mad)
-importFrom(stats,runmed)
-importFrom(stats,sd)
+importFrom(stats,
+  approx,
+  mad,
+  runmed,
+  sd
+)

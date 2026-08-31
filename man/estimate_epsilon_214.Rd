@@ -2,18 +2,23 @@
 % Please edit documentation in R/estimate_epsilon_214.R
 \name{estimate_epsilon_214}
 \alias{estimate_epsilon_214}
-\title{Estimate the sequence‐specific ε214 (Kuipers & Gruppen, 2007),
-with special tripeptide corrections}
+\title{Estimate the sequence-specific eps214 used for quantitation}
 \usage{
 estimate_epsilon_214(sequence)
 }
 \arguments{
-\item{sequence}{Character. Peptide one‐letter code.}
+\item{sequence}{Character. Peptide one-letter code.}
 }
 \value{
-Numeric. ε214 in M⁻¹·cm⁻¹.
+Numeric. eps214 in M^-1 cm^-1, or NA_real_ for an unusable sequence.
 }
 \description{
-Estimate the sequence‐specific ε214 (Kuipers & Gruppen, 2007),
-with special tripeptide corrections
+The published Kuipers and Gruppen value with our measured recalibration applied: the
+tryptophan term is replaced and everything else is scaled. See the constants at the top
+of this file, and the "Recalibration of eps214" section of the README, for the data the
+two numbers come from and how to change them.
+}
+\details{
+The four special tripeptides are scaled along with everything else. They carry no
+tryptophan, so they take the same global scale as any other tryptophan-free peptide.
 }

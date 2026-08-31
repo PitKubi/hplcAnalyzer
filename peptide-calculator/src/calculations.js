@@ -1,11 +1,25 @@
+// Molar absorptivity at 214 nm. These three constants are the same ones the R package
+// carries in R/estimate_epsilon_214.R; the two implementations exist because the Electron
+// calculator and the Shiny app run on different runtimes, and they must be changed together.
+//
+// Measured on two peptide purity batches, 31 August 2026: the 214-to-280
+// concentration ratio, taken within one injection so amount and batch offset cancel, tracks
+// tryptophan and nothing else (Spearman rho -0.76, p < 1e-13). A two-parameter fit on 71
+// gated injections replaces the tryptophan term and scales everything else. Tyrosine and
+// phenylalanine, fitted freely, stay at their published values. See the README section
+// "Recalibration of eps214" for the evidence and for how to change the scale.
+const PUBLISHED_TRYPTOPHAN_EPSILON_214 = 29050;
+const MEASURED_TRYPTOPHAN_EPSILON_214 = 17340;   // 95 % CI 14,519 to 19,569
+const NON_TRYPTOPHAN_EPSILON_214_SCALE = 1.118;  // 95 % CI 1.01 to 1.26; the soft number
+
 /**
- * Estimate the sequence-specific ε214 (Kuipers & Gruppen, 2007),
- * with special tripeptide corrections
- * 
+ * Molar absorptivity at 214 nm exactly as published (Kuipers & Gruppen, 2007),
+ * with the four special tripeptides of their Table 3. No correction applied.
+ *
  * @param {string} sequence - Peptide one-letter code
  * @returns {number} ε214 in M⁻¹·cm⁻¹
  */
-export function estimateEpsilon214(sequence) {
+export function publishedEpsilon214(sequence) {
   if (!sequence || !/^[ACDEFGHIKLMNPQRSTVWY]+$/i.test(sequence)) {
     return NaN;
   }
@@ -13,7 +27,7 @@ export function estimateEpsilon214(sequence) {
   // Standard contributions from Table 5
   const coeffs = {
     PB: 923,   // peptide bond
-    W: 29050,  // Trp
+    W: PUBLISHED_TRYPTOPHAN_EPSILON_214,  // Trp
     Y: 5375,   // Tyr
     F: 5200,   // Phe
     H: 5125,   // His
@@ -73,6 +87,27 @@ export function estimateEpsilon214(sequence) {
   eps += internal_P * 2675;
 
   return eps;
+}
+
+/**
+ * Estimate the sequence-specific ε214 used for quantitation: the published value with
+ * the measured recalibration applied. The four special tripeptides carry no tryptophan,
+ * so they take the same global scale as any other tryptophan-free peptide.
+ *
+ * @param {string} sequence - Peptide one-letter code
+ * @returns {number} ε214 in M⁻¹·cm⁻¹
+ */
+export function estimateEpsilon214(sequence) {
+  const published = publishedEpsilon214(sequence);
+  if (!Number.isFinite(published)) {
+    return NaN;
+  }
+
+  const tryptophanCount = (sequence.toUpperCase().match(/W/g) || []).length;
+  const withoutTryptophan = published - PUBLISHED_TRYPTOPHAN_EPSILON_214 * tryptophanCount;
+
+  return NON_TRYPTOPHAN_EPSILON_214_SCALE * withoutTryptophan +
+    MEASURED_TRYPTOPHAN_EPSILON_214 * tryptophanCount;
 }
 
 /**

@@ -62,7 +62,7 @@ function App() {
     <div className="App">
       <header className="App-header">
         <h1>HPLC Peptide Concentration Calculator</h1>
-        <p>Based on Kuipers & Gruppen (2007) ε214 estimation</p>
+        <p>Based on Kuipers &amp; Gruppen (2007) ε214 estimation, with the tryptophan term recalibrated on measured data</p>
       </header>
 
       <div className="calculator-container">
@@ -202,7 +202,7 @@ function App() {
       </div>
 
       <footer className="App-footer">
-        <p>Based on: Kuipers, B. J., & Gruppen, H. (2007). Prediction of molar extinction coefficients of proteins and peptides using UV absorption of the constituent amino acids at 214 nm to enable quantitative reverse phase high-performance liquid chromatography-mass spectrometry analysis. Journal of Agricultural and Food Chemistry, 55(14), 5445-5451.</p>
+        <p>The tryptophan term and a global scale are recalibrated against measured 214/280 nm data; see the package README, section "Recalibration of eps214". Underlying model: Kuipers, B. J., &amp; Gruppen, H. (2007). Prediction of molar extinction coefficients of proteins and peptides using UV absorption of the constituent amino acids at 214 nm to enable quantitative reverse phase high-performance liquid chromatography-mass spectrometry analysis. Journal of Agricultural and Food Chemistry, 55(14), 5445-5451.</p>
         <p className="builder-credit">Built by Peter Kubiniok</p>
       </footer>
     </div>
