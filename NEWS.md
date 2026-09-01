@@ -1,15 +1,15 @@
-# hplcAnalyzer 0.7.4
+# hplcAnalyzer 0.7.5
 
-* **The app no longer takes the blank-subtracting path just because a blank is in the folder.**
-  That path's piecewise baseline is not a baseline: on a production run it jumps **171 mAU between
-  two adjacent points** and dives to -171 at both ends of the chromatogram, where the plain ALS fit
-  moves at most **0.8 mAU** between points. It also over-subtracts the blank's own injector peak,
-  leaving about -317 mAU at 3.3 min in every run, which has been documented since 0.5.2.
+* **The global ALS baseline is stiffer: `sample_als_lambda` 4.0 to 5.5.** At 4.0 it arced up into
+  the main peak instead of passing under it, rising from about 23 mAU either side of a peak to 40
+  beneath it. Measured over 24 runs it climbed a median of 6.2 mAU above the straight line joining
+  its own values at the peak's feet; at 5.5 that is 0.9 mAU.
 
-  It was worth tolerating when a global baseline decided the area. It is not now: with each peak
-  integrated against its own chord, choosing that path moves the reported area by a median of 1.6
-  percent. The plain ALS baseline is smooth, continuous and sits on zero across the run, and it is
-  what the overlay plot now shows.
+  One global λ cannot both follow the injector disturbance and stay stiff under a peak. The trade
+  is monotone: from λ 4 to 6.5 the climb falls 6.2 to 0.5 mAU while the corrected trace's offset
+  in the first minute rises 13 to 138. 5.5 is the knee.
 
-  Still available as `use_hybrid = TRUE` on `run_hplc_analysis_agilent()`.
+  This moves reported areas by 0.3 percent, because areas come from each peak's own chord rather
+  than from this baseline. What it changes is what the overlay plot shows, which is the first
+  thing anyone looks at, and it should not look like the baseline is eating the peak.
 

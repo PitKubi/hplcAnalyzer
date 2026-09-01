@@ -8,7 +8,7 @@ run_hplc_analysis_agilent(
   sample_d_path,
   blank_d_path = NULL,
   peptide_sequence,
-  sample_als_lambda = 4,
+  sample_als_lambda = 5.5,
   sample_als_p = 1e-04,
   use_hybrid = FALSE,
   hybrid_als_lambda = 6.5,
@@ -39,16 +39,18 @@ run_hplc_analysis_agilent(
 
 \item{peptide_sequence}{Character. Peptide one-letter code.}
 
-\item{sample_als_lambda}{Numeric. λ for global ALS baseline. Default 4.0.}
+\item{sample_als_lambda}{Numeric. λ for global ALS baseline. Default 5.5.}
 
 \item{sample_als_p}{Numeric. p for global ALS baseline. Default 1e-4.
-These two are the shipped values and they are known to let the fitted baseline rise into
-the main peak: measured across 47 runs of a production batch, the baseline sits above the
-peak's own foot-to-foot line at the apex on 23 percent of them, by a median of 10 mAU at
-the apex where it happens, which is area taken out of the peak. λ = 5.5 with p = 1e-6 was
-measured to remove it on all 47, at the cost of raising every 214 nm area by about 8
-percent, and was not adopted. Pass either argument if you want that behaviour on a
-particular batch. See the README, "The global baseline can rise into the peak".}
+  One global λ cannot both follow the injector disturbance and stay stiff under a peak, and the
+  trade is monotone. Measured over 24 runs, as λ rises from 4 to 6.5 the baseline's climb into
+  the main peak falls from 6.2 mAU to 0.5 while the corrected trace's offset in the first
+  minute rises from 13 mAU to 138. 5.5 is the knee: the climb is 0.9 mAU, essentially gone, and
+  beyond it the climb barely improves while the injector cost keeps rising.
+
+  Neither end of that trade changes a reported number. Areas are taken against each peak's own
+  chord, and the injector region sits before the analyte window that `min_rt_frac` opens. What
+  λ decides is what the overlay plot looks like and what peak detection thresholds against.}
 
 \item{hybrid_als_lambda}{Numeric. λ for piecewise ALS. Default 6.5.}
 
