@@ -9,7 +9,7 @@ the peaks, and converts the main peak area to molarity using a molar absorptivit
 from the peptide sequence. Everything runs locally, either from the R console or from a Shiny
 app aimed at bench chemists rather than R programmers.
 
-Version 0.7.7. See [NEWS.md](NEWS.md) for the version history.
+Version 0.7.8. See [NEWS.md](NEWS.md) for the version history.
 
 ![The app with a batch loaded](man/figures/app-03-sample-detail.png)
 
@@ -183,13 +183,13 @@ cd hplc_analyzer
 R CMD build .
 ```
 
-That writes `hplcAnalyzer_0.7.7.tar.gz`. Send that file. The recipient installs the CRAN
+That writes `hplcAnalyzer_0.7.8.tar.gz`. Send that file. The recipient installs the CRAN
 dependencies once and then the tarball:
 
 ```r
 install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot2",
                    "gridExtra","shiny","shinyFiles","fs","DT","tibble","xml2","magrittr"))
-install.packages("C:/path/to/hplcAnalyzer_0.7.7.tar.gz", repos = NULL, type = "source")
+install.packages("C:/path/to/hplcAnalyzer_0.7.8.tar.gz", repos = NULL, type = "source")
 ```
 
 On Windows, close and reopen R before installing over an existing version. A loaded package
@@ -573,16 +573,22 @@ into the main peak falls from **2.51 mAU to 0.34**, the worst it gets above the 
 peak from **0.31 mAU to 0.02**, and the offset it leaves in the first minute from **119 mAU to
 78**. Reported areas are unchanged, because they are taken against each peak's own chord.
 
-The app used to show this baseline in an overlay panel above the chromatogram, and that panel was
-removed in 0.7.7 because it was actively misleading. It drew the ALS baseline against the
-**corrected** trace, so the dashed line sat above the black one over most of the run and looked
-like a baseline eating its way through the peaks. It is not: a baseline plotted on the signal it
-has already been subtracted from is above that signal by exactly the amount it subtracted. Against
-the **raw** trace, the one it was actually fitted to, it lay above on 4.0 percent of points by at
-most 0.31 mAU. Since areas are now taken against each peak's own chord, the panel displayed an
-intermediate step that decides no reported number while implying the tool was broken, so it is
-gone. The two panels that remain both draw the raw trace with the chord that does decide the
-area.
+The **Baseline subtraction** panel at the top of the app shows this fit, in two stacked panels
+sharing a time axis: the raw signal with the baseline drawn on it, and underneath, what is left
+after subtracting it. Its subtitle reports how far the baseline rises above the raw trace, which
+is the number that says whether it is cutting into anything.
+
+The two panels are deliberately not superimposed. Until 0.7.7 this panel drew the baseline in the
+same axes as the **corrected** trace, and that comparison is meaningless: the corrected trace sits
+near zero while the baseline sits at whatever it is subtracting, so the baseline towers over it
+across the whole run and the panel reads as though the tool were destroying its own peaks. A
+baseline is above the signal it has already been subtracted from by exactly the amount it
+subtracted. The comparison that actually tells you something is against the **raw** trace it was
+fitted to, and that is the one drawn now. Measured that way over 47 production runs the baseline
+lies above the raw trace on 4.0 percent of points, by at most 0.31 mAU. The figure the panel
+prints is for the run in front of you, so it will differ from that; on the demo batch above it
+reads 3.9 percent and 2.55 mAU, the 2.55 coming from the negative injection artefact just after
+2 minutes, which the fit cannot dive fast enough to follow.
 
 ### The blank-subtracting path is no longer used by default
 
@@ -849,7 +855,7 @@ GPL-3. Copyright Peter Kubiniok.
 If you use hplcAnalyzer, cite the software together with references 1 and 2 above:
 
 > Kubiniok, P. (2026). hplcAnalyzer: automated HPLC-UV analysis and peptide concentration
-> estimation. R package version 0.7.7.
+> estimation. R package version 0.7.8.
 
 If you report a 214 nm concentration from it, say which coefficients you used. The shipped
 `estimate_epsilon_214()` is **not** the published Kuipers and Gruppen value for tryptophan;

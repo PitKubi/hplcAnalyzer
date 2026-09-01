@@ -1,3 +1,19 @@
+# hplcAnalyzer 0.7.8
+
+* **The baseline panel is back, drawn correctly.** `plot_baseline_subtraction()` puts the raw
+  signal and the baseline that was fitted to it in one panel, and what is left after subtraction
+  in a second panel below it, sharing a time axis. The subtitle reports the fraction of points at
+  which the baseline rises above the raw trace, and the largest such excess.
+
+* The two are deliberately not superimposed. Drawing a baseline in the same axes as the
+  *corrected* trace, which is what this panel did until 0.7.7, compares it against the signal it
+  has already been subtracted from, where it necessarily sits above by exactly the amount it
+  subtracted. Against the raw trace it was fitted to, it lies above on 4.0 percent of points by
+  at most 0.31 mAU.
+
+* New: `baseline_fitted_to_least_corrected_trace()`, which returns the baseline column paired
+  with the trace `least_corrected_trace()` returns, and `summarise_baseline_above_trace()`.
+
 # hplcAnalyzer 0.7.7
 
 * **The ALS baseline overlay panel is gone from the app.** It sat at the top of the main panel and

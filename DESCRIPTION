@@ -1,7 +1,7 @@
 Package: hplcAnalyzer
 Type: Package
 Title: Automated HPLC-UV Analysis and peptide concentration estimation
-Version: 0.7.7
+Version: 0.7.8
 Author: Peter Kubiniok
 Maintainer: Peter Kubiniok <peterkubiniok@quantivum.com>
 Authors@R: 

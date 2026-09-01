@@ -117,6 +117,8 @@ ui <- fluidPage(
       DTOutput("samplesDT"),
       tags$style(HTML("#samplesDT {font-size: 12px;}.dataTables_wrapper .dataTables_scrollBody {border: 1px solid #eee;}")),
       hr(),
+      plotOutput("baselineSubtraction", height = "420px"),
+      hr(),
       h4(textOutput("currentSample")),
       plotOutput(
         "peakPlot",
@@ -729,17 +731,16 @@ server <- function(input, output, session) {
     })
   })
 
-  # --- raw + baseline overlay ---
-  # The ALS overlay panel that used to sit at the top of the main panel was removed in 0.7.7.
-  # It drew the ALS baseline against the *corrected* trace, so the dashed line sat above the
-  # black one over most of the run and read as "the baseline is eating the peaks" -- an artefact
-  # of overlaying a baseline computed on the raw signal onto the signal it had already been
-  # subtracted from. Measured on real runs it lay above the corrected trace on 78.5 % of points
-  # but above the raw trace on only 4.0 %, by at most 0.31 mAU. Since 0.7.x the ALS pass only
-  # seeds peak detection -- every reported area comes from the endpoint chord drawn on the raw
-  # trace in the two panels below -- so the panel showed an intermediate step that no longer
-  # decides any number, at the cost of implying the tool was broken. Do not reinstate it without
-  # plotting the baseline against the raw trace it was fitted to.
+  # --- baseline subtraction ---
+  # Two stacked panels: the raw trace with the baseline that was fitted to it, and the result of
+  # subtracting it. Never superimpose the baseline on the *corrected* trace, which is what this
+  # panel did until 0.7.7 -- the corrected trace sits near zero while the baseline sits at
+  # whatever it subtracts, so the baseline appears to tower over the signal and the panel reads
+  # as though the tool were destroying its own peaks. See plot_baseline_subtraction().
+  output$baselineSubtraction <- renderPlot({
+    ar <- analysis_res(); req(!is.null(ar$df_hybrid))
+    plot_baseline_subtraction(ar$df_hybrid)
+  })
 
   #header
   output$metricsHeader <- renderText({
