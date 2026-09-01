@@ -72,7 +72,7 @@ run_hplc_analysis_thermo <- function(
   # 5b) Same endpoint-baseline integration as the Agilent path. A Thermo export arrives already
   # corrected by the instrument, so `corrected` and `intensity` are the same column here.
   reintegrated <- reintegrate_peaks_against_endpoint_baseline(
-    peak_table, df_hybrid$time, df_hybrid$intensity
+    peak_table, df_hybrid$time, least_corrected_trace(df_hybrid)
   )
   peak_table <- reintegrated$peak_table
   peak_geometry <- reintegrated$geometry

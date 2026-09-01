@@ -9,7 +9,7 @@ the peaks, and converts the main peak area to molarity using a molar absorptivit
 from the peptide sequence. Everything runs locally, either from the R console or from a Shiny
 app aimed at bench chemists rather than R programmers.
 
-Version 0.6.1. See [NEWS.md](NEWS.md) for the version history.
+Version 0.6.2. See [NEWS.md](NEWS.md) for the version history.
 
 ![The app with a batch loaded](man/figures/app-03-sample-detail.png)
 
@@ -183,13 +183,13 @@ cd hplc_analyzer
 R CMD build .
 ```
 
-That writes `hplcAnalyzer_0.6.1.tar.gz`. Send that file. The recipient installs the CRAN
+That writes `hplcAnalyzer_0.6.2.tar.gz`. Send that file. The recipient installs the CRAN
 dependencies once and then the tarball:
 
 ```r
 install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot2",
                    "gridExtra","shiny","shinyFiles","fs","DT","tibble","xml2","magrittr"))
-install.packages("C:/path/to/hplcAnalyzer_0.6.1.tar.gz", repos = NULL, type = "source")
+install.packages("C:/path/to/hplcAnalyzer_0.6.2.tar.gz", repos = NULL, type = "source")
 ```
 
 On Windows, close and reopen R before installing over an existing version. A loaded package
@@ -574,12 +574,25 @@ below it. At the 0.02 this started with, one peak had its chord at 44 mAU where 
 side sits at 32: 13 mAU cut off along the entire peak. At 0.002 the chord sits within about
 2 mAU of the local baseline. It is exposed as `foot_fraction` if a method needs something else.
 
-**Why not a global baseline.** An ALS baseline fitted to the whole chromatogram rises under a
-peak instead of passing beneath it, and the area under that hump is lost. Measured over 47 runs
-of a production batch it cost a median **9.6 percent** of the 214 nm peak area: about 2 percent
-on a well-resolved peak, 10 to 12 on a crowded one, 52 percent at worst. The global ALS
-correction is still applied for the overlay plot and for peak detection, where a flat trace is
-what a detector threshold needs, but it no longer decides any area.
+**Why not a global baseline.** Not because the global one is expensive. Measured on the shipped
+integration over 47 runs, running it on the ALS-corrected trace instead of the raw one changes
+the area by a median of **1.0 percent**, interquartile 0.4 to 1.8, worst 3.6, and it is negative
+on 9 of the 47. A chord fitted at the peak's own feet absorbs almost all of whatever a global
+fit did beforehand.
+
+The reason is robustness, and it is measurable in the same way. With the chord supplying the
+baseline, **how much correction was applied first stops mattering**: across the same 47 runs the
+blank-subtracting path and the plain ALS path give areas differing by a median of **+0.1
+percent**, interquartile -0.0 to +0.6. Four of the 47 differ by more than 5 percent and all four
+are peaks small or crowded enough that the envelope walk is unreliable. Under the previous
+scheme, where a global baseline decided the area, that choice moved concentrations by 5 to 15
+percent. So the global correction still runs, for the overlay plot and for peak detection where
+a threshold needs a flat trace, and it no longer decides an area.
+
+An earlier version of this section claimed the global baseline cost a median 9.6 percent, worst
+52. That number was measured on a prototype, before peak envelopes were bounded at the valley
+between neighbours and with the foot walk stopping far earlier, and it does not describe the
+code here. It is corrected above rather than quietly removed.
 
 ![baseline check](man/figures/baseline_tuning_check.png)
 
@@ -753,6 +766,13 @@ that has already been reported. Set it yourself.
 - **The hybrid baseline path can fail on individual runs.** One of 58 runs in the batch tested
   errors inside `baseline_hybrid_sm()` with `invalid 'times' argument`. The app catches it, and
   the row carries the error text rather than a number.
+- **The envelope walk is unreliable on small or crowded peaks.** Measured across 47 runs, the
+  chord sits a median 27.9 mAU above the local baseline but 105 mAU above it at the 90th
+  percentile, and on the worst run both feet land on the flanks and the chord runs diagonally
+  through the peak. The cause is that the walk is stopped at the valley between neighbouring
+  peaks and the endpoint level is then fitted at that stop point, which on a crowded run is
+  partway up a flank. Well-resolved peaks are unaffected; the chord lands within a few mAU of
+  the baseline.
 - **Integration is not adjustable from the app.** The foot walk, the valley prominence and the
   ten point endpoint fit are constants in `R/integrate_peak_endpoint_baseline.R`. A peak whose
   envelope cannot be walked silently keeps the area the detector's own trapezoid gave it.
@@ -854,7 +874,7 @@ GPL-3. Copyright Peter Kubiniok.
 If you use hplcAnalyzer, cite the software together with references 1 and 2 above:
 
 > Kubiniok, P. (2026). hplcAnalyzer: automated HPLC-UV analysis and peptide concentration
-> estimation. R package version 0.6.1.
+> estimation. R package version 0.6.2.
 
 If you report a 214 nm concentration from it, say which coefficients you used. The shipped
 `estimate_epsilon_214()` is **not** the published Kuipers and Gruppen value for tryptophan;

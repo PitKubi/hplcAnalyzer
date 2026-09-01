@@ -168,7 +168,7 @@ run_hplc_analysis_agilent <- function(
   # corrected column would have a baseline taken off twice. See
   # integrate_peak_against_endpoint_baseline() for what the global baseline was costing.
   reintegrated <- reintegrate_peaks_against_endpoint_baseline(
-    peak_table, df_hybrid$time, df_hybrid$intensity
+    peak_table, df_hybrid$time, least_corrected_trace(df_hybrid)
   )
   peak_table <- reintegrated$peak_table
   peak_geometry <- reintegrated$geometry

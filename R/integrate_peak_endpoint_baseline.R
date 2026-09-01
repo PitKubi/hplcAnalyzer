@@ -152,6 +152,24 @@ integrate_peak_against_endpoint_baseline <- function(time, signal, apex_time, n_
        drop_rts = time[drops])
 }
 
+#' The least corrected trace a pipeline frame carries
+#'
+#' The chord is the baseline, so the integration wants the trace with as little baseline already
+#' removed as possible. The two pipelines build different frames: the plain ALS path keeps the
+#' raw `intensity` alongside its `corrected`, while `align_subtract_then_hybrid()` returns
+#' `raw_diff`, the blank-subtracted trace before its piecewise baseline, and carries no
+#' `intensity` at all. Reaching for `intensity` on that path is how v0.6.0 broke every run in any
+#' batch containing a blank.
+#'
+#' @param df A frame from either pipeline.
+#' @return The least corrected numeric column available.
+#' @export
+least_corrected_trace <- function(df) {
+  if (!is.null(df$intensity)) return(df$intensity)
+  if (!is.null(df$raw_diff)) return(df$raw_diff)
+  df$corrected
+}
+
 #' Re-integrate every detected peak against its own endpoint baseline
 #'
 #' Replaces the `area` column produced by `detect_peaks_on_smoothed()`, and returns the

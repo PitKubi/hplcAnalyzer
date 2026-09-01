@@ -43,3 +43,14 @@ test_that("tryptophan now lowers the concentration a peptide reports, and by how
   expect_gt(ratio, 1.4)
   expect_lt(ratio, 1.5)
 })
+
+# v0.6.0 called for a raw `intensity` column that the blank-subtracting pipeline does not build,
+# so every run in any batch containing a blank died. The frames are built in two different
+# places, so the column choice is pinned here rather than left to whoever edits next.
+test_that("the least corrected trace is found on either pipeline's frame", {
+  als <- data.frame(time = 1:5, intensity = 11:15, baseline = 1:5, corrected = 10:14)
+  hybrid <- data.frame(time = 1:5, raw_diff = 21:25, baseline_local = 1:5, corrected = 20:24)
+  expect_equal(least_corrected_trace(als), 11:15)
+  expect_equal(least_corrected_trace(hybrid), 21:25)
+  expect_equal(least_corrected_trace(data.frame(time = 1:5, corrected = 30:34)), 30:34)
+})

@@ -12,7 +12,8 @@ plot_peak_integration_detail(
 )
 }
 \arguments{
-\item{df_hybrid}{Data.frame with `time` and `intensity`.}
+\item{df_hybrid}{Data.frame from either pipeline; the trace is taken with
+[least_corrected_trace()].}
 
 \item{peak_geometry}{List from [integrate_peak_against_endpoint_baseline()].}
 

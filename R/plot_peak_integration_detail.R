@@ -6,7 +6,8 @@
 #' visible. This draws the same geometry over a window around the peak. The full trace is not
 #' replaced by it; both are shown.
 #'
-#' @param df_hybrid Data.frame with `time` and `intensity`.
+#' @param df_hybrid Data.frame from either pipeline; the trace is taken with
+#'   [least_corrected_trace()].
 #' @param peak_geometry List from [integrate_peak_against_endpoint_baseline()].
 #' @param area Numeric. The integrated area, for the caption.
 #' @param margin_min Numeric. Minutes of trace to keep either side. Default 1.2.
@@ -21,6 +22,7 @@ plot_peak_integration_detail <- function(df_hybrid, peak_geometry, area = NA_rea
     (x - peak_geometry$foot_start_rt) /
     (peak_geometry$foot_end_rt - peak_geometry$foot_start_rt)
 
+  df_hybrid$plotted <- least_corrected_trace(df_hybrid)
   window <- df_hybrid[df_hybrid$time > peak_geometry$foot_start_rt - margin_min &
                       df_hybrid$time < peak_geometry$foot_end_rt + margin_min, ]
   counted <- df_hybrid[df_hybrid$time >= peak_geometry$start_rt &
@@ -35,8 +37,8 @@ plot_peak_integration_detail <- function(df_hybrid, peak_geometry, area = NA_rea
     "measured above the orange chord between the peak's own two feet"
   }
 
-  ggplot(window, aes(time, intensity)) +
-    geom_ribbon(data = counted, aes(x = time, ymin = floor, ymax = pmax(intensity, floor)),
+  ggplot(window, aes(time, plotted)) +
+    geom_ribbon(data = counted, aes(x = time, ymin = floor, ymax = pmax(plotted, floor)),
                 fill = "#2a78d6", alpha = 0.30, inherit.aes = FALSE) +
     geom_line(linewidth = 0.5) +
     geom_vline(xintercept = peak_geometry$drop_rts, colour = "#eb6834",

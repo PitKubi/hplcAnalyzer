@@ -32,9 +32,8 @@ plot_largest_peak <- function(df_hybrid, peak_table,
   i_start  <- which.min(abs(df_hybrid$time - start_rt))
   i_end    <- which.min(abs(df_hybrid$time - end_rt))
   df_peak  <- df_hybrid[i_start:i_end, ]
-  trace_column <- if (drawn_on_raw) "intensity" else "corrected"
-  df_hybrid$plotted <- df_hybrid[[trace_column]]
-  df_peak$plotted   <- df_peak[[trace_column]]
+  df_hybrid$plotted <- if (drawn_on_raw) least_corrected_trace(df_hybrid) else df_hybrid$corrected
+  df_peak$plotted   <- if (drawn_on_raw) least_corrected_trace(df_peak)   else df_peak$corrected
   if (drawn_on_raw) {
     chord_at <- function(x) peak_geometry$foot_start_level +
       (peak_geometry$foot_end_level - peak_geometry$foot_start_level) *
