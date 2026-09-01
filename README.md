@@ -9,7 +9,7 @@ the peaks, and converts the main peak area to molarity using a molar absorptivit
 from the peptide sequence. Everything runs locally, either from the R console or from a Shiny
 app aimed at bench chemists rather than R programmers.
 
-Version 0.5.3. See [NEWS.md](NEWS.md) for the version history.
+Version 0.6.0. See [NEWS.md](NEWS.md) for the version history.
 
 ![The app with a batch loaded](man/figures/app-03-sample-detail.png)
 
@@ -183,13 +183,13 @@ cd hplc_analyzer
 R CMD build .
 ```
 
-That writes `hplcAnalyzer_0.5.3.tar.gz`. Send that file. The recipient installs the CRAN
+That writes `hplcAnalyzer_0.6.0.tar.gz`. Send that file. The recipient installs the CRAN
 dependencies once and then the tarball:
 
 ```r
 install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot2",
                    "gridExtra","shiny","shinyFiles","fs","DT","tibble","xml2","magrittr"))
-install.packages("C:/path/to/hplcAnalyzer_0.5.3.tar.gz", repos = NULL, type = "source")
+install.packages("C:/path/to/hplcAnalyzer_0.6.0.tar.gz", repos = NULL, type = "source")
 ```
 
 On Windows, close and reopen R before installing over an existing version. A loaded package
@@ -216,7 +216,7 @@ no network call anywhere in the package.
 
 The run shown below is a real Agilent batch of four peptide injections, chosen because each
 main peak resolves to baseline on both sides; see
-[how the integration window is chosen](#how-the-integration-window-is-chosen) for what happens
+[how a peak is integrated](#how-a-peak-is-integrated) for what happens
 when it does not. The peptide names are synthetic, so the numbers belong to the sequences on
 screen rather than to anyone's samples. There is no blank in this folder, so the screenshots
 show the plain ALS baseline path; see
@@ -240,11 +240,15 @@ Each row carries the retention time and area of the main peak, the concentration
 after the dilution factor, the sequence that was resolved, and a status. A blank, if one is
 present in the folder, is detected and used rather than listed as a sample.
 
-**Step 3. Inspect one run.** Click a row, or use **Previous** and **Next**. The upper plot
-shows the raw trace, the fitted baseline and the corrected trace, so you can see what the
-baseline correction did rather than trust it. The lower plot shows the corrected trace with
-the integrated peak shaded and the numbers that produced the concentration, including the
-epsilon actually used. The sidebar fills with the top ten peaks and their **Area (%)**.
+**Step 3. Inspect one run.** Click a row, or use **Previous** and **Next**. The top plot shows
+the raw trace, the fitted baseline and the corrected trace, so you can see what the baseline
+correction did rather than trust it. The middle plot shows the whole acquired run with the
+integrated peak shaded and the numbers that produced the concentration, including the epsilon
+actually used. The bottom plot, **Integration detail**, is the same peak zoomed: the orange
+chord is the baseline the area was measured against, the shaded region is what was counted, and
+a dotted line marks any point where a fused neighbour was cut away. The run above it is never
+truncated, which is why the detail gets its own panel. The sidebar fills with the top ten peaks
+and their **Area (%)**.
 
 ![One sample, with its chromatogram and peak table](man/figures/app-03-sample-detail.png)
 
@@ -540,64 +544,36 @@ in case 1 stayed invisible until 2026.
 
 ## Behaviour that will surprise you
 
-### The global baseline can rise into the peak
+### How a peak is integrated
 
-The global ALS baseline ships at **lambda 4.0, p 1e-4**. Those values are known to let the
-fitted baseline lift into the main peak instead of passing under it, and the effect is not rare.
+Each peak is integrated **against a baseline drawn between its own two feet**, not against zero
+after a global baseline has been subtracted from the whole trace.
+
+The window is found by walking outward from the apex. A dip that is still well above the local
+level is a fused neighbour rather than the end of the peak, so the walk carries on past it and
+remembers where it was; each remembered dip becomes a perpendicular drop, and only the slice
+holding the tallest apex, the analyte, is counted. Where two detected peaks meet, the boundary
+is the valley between them, so no two peaks can claim the same stretch of trace and **Area (%)**
+stays a meaningful ratio. The level at each foot is fitted from the ten nearest points on the
+side away from the apex, so the fit never leans on the peak. Everything above the resulting
+chord is integrated, nothing below it.
+
+The **Integration detail** panel in the app draws exactly that geometry, and
+`integrate_peak_against_endpoint_baseline()` returns it if you want to draw it yourself.
+
+**Why not a global baseline.** An ALS baseline fitted to the whole chromatogram rises under a
+peak instead of passing beneath it, and the area under that hump is lost. Measured over 47 runs
+of a production batch it cost a median **9.6 percent** of the 214 nm peak area: about 2 percent
+on a well-resolved peak, 10 to 12 on a crowded one, 52 percent at worst. The global ALS
+correction is still applied for the overlay plot and for peak detection, where a flat trace is
+what a detector threshold needs, but it no longer decides any area.
 
 ![baseline check](man/figures/baseline_tuning_check.png)
 
-The orange line joins the peak's own two feet, which is the classical valley-to-valley
-baseline. Anything the fitted baseline does above that line is area taken out of the peak. On
-the left, at the shipped default, it lifts into a hump of about 40 mAU directly under the peak
-while the true local baseline either side is 25. On the right is what lambda 5.5 with p 1e-6
-does instead: flat at 27, straight under the peak. Same run, same peak; only the two baseline
-parameters differ.
-
-Measured across 47 runs of a production batch, the shipped setting puts the fitted baseline
-above the foot-to-foot line at the apex on **23 percent of runs**. At lambda 5.5, p 1e-6 that
-falls to **none of them**, with a maximum excess anywhere inside a peak of -11.6 mAU, so the
-baseline is strictly below the foot line everywhere. The cost is that every 214 nm area rises
-by about 8 percent, which moves every concentration this package has ever reported, so the
-shipped values are deliberately left where they are.
-
-**If you want the tighter baseline**, pass it explicitly:
-
-```r
-run_hplc_analysis_agilent(..., sample_als_lambda = 5.5, sample_als_p = 1e-6)
-```
-
-Raising lambda alone also removes the clipping but costs elsewhere: at lambda 6.5 with p left
-at 1e-4 the corrected trace needs 9.6 min to settle back to zero after the injector rather than
-6.5, and sits 1.6 mAU off zero between peaks rather than 0.6. p is the parameter that decides
-how hard the fit is pushed under the data, so it is the one that keeps a baseline off a peak.
-
-The piecewise baseline on the blank-subtracting path has its own pair, `hybrid_als_lambda` and
-`hybrid_als_p`, and has always run at 6.5.
-
-### How the integration window is chosen
-
-The area of a peak is integrated between the two local minima either side of its apex, which is
-what `pracma::findpeaks()` reports as the peak's start and end. When the peak is resolved, those
-minima sit at baseline and the integration runs foot to foot. When something is fused onto the
-flank, the minimum sits partway up it, and the integration then starts there: a perpendicular
-drop at the valley, which is the standard treatment for an unresolved pair and keeps the
-impurity out of the main peak's area.
-
-**This is worth knowing because it looks wrong on screen.** The shaded region in the peak plot
-begins at a cliff partway up the rising edge rather than at the baseline, and the natural
-reading is that the integration is clipping the peak. It is not; it is excluding a neighbour.
-
-Two things follow. **No parameter changes it.** `snr`, `min_peak_dist` and `post_win` all change
-which peaks are reported, and none of them moves the boundary of the peak that survives: raising
-`snr` from 5 to 100 on a test run leaves the start at 12.01 min and the area at 218.1 either way.
-The boundary rule is in `findpeaks()`, not in a setting. And **it is common in purity samples**:
-across roughly 70 runs of one production batch, only four had a main peak whose integration
-began and ended below 2 percent of peak height. The median start sat at about 9 percent.
-
-If you need the fused shoulder included, integrate it yourself from `result$df_hybrid`, which
-carries the corrected trace, or resolve the pair chromatographically. The package will not merge
-them for you, because merging a real impurity into the main peak would overstate purity.
+The orange line joins the peak's own two feet. Anything a fitted baseline does above that line
+is area taken out of the peak. On the left is what the global ALS baseline does at the settings
+this package uses for detection; on the right, a stiffer setting that does not. Neither is used
+for integration any more, which is the point.
 
 ### The blank-subtracting path leaves an injector artefact
 
@@ -764,14 +740,9 @@ that has already been reported. Set it yourself.
 - **The hybrid baseline path can fail on individual runs.** One of 58 runs in the batch tested
   errors inside `baseline_hybrid_sm()` with `invalid 'times' argument`. The app catches it, and
   the row carries the error text rather than a number.
-- **The global ALS baseline rises into the main peak on about a quarter of runs** at the
-  shipped `sample_als_lambda = 4.0`, `sample_als_p = 1e-4`, taking area out of it. Measured, and
-  fixable per call, but not changed by default because it would move every number this package
-  has reported. See [the global baseline can rise into the peak](#the-global-baseline-can-rise-into-the-peak).
-- **The integration window stops at a fused shoulder**, so on a peak with an unresolved
-  neighbour the shaded region starts partway up the flank rather than at baseline. That is a
-  perpendicular drop and it is deliberate, but no parameter adjusts it. See
-  [how the integration window is chosen](#how-the-integration-window-is-chosen).
+- **Integration is not adjustable from the app.** The foot walk, the valley prominence and the
+  ten point endpoint fit are constants in `R/integrate_peak_endpoint_baseline.R`. A peak whose
+  envelope cannot be walked silently keeps the area the detector's own trapezoid gave it.
 - **The hybrid baseline path over-subtracts the injector peak**, leaving a constant -317 mAU
   artefact at 3.28 min that the guard ramp does not cover, and returns concentrations 5 to 15
   percent different from the ALS path on the same runs. See
@@ -870,7 +841,7 @@ GPL-3. Copyright Peter Kubiniok.
 If you use hplcAnalyzer, cite the software together with references 1 and 2 above:
 
 > Kubiniok, P. (2026). hplcAnalyzer: automated HPLC-UV analysis and peptide concentration
-> estimation. R package version 0.5.3.
+> estimation. R package version 0.6.0.
 
 If you report a 214 nm concentration from it, say which coefficients you used. The shipped
 `estimate_epsilon_214()` is **not** the published Kuipers and Gruppen value for tryptophan;

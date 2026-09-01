@@ -11,7 +11,8 @@ plot_largest_peak(
   blank_name = NULL,
   epsilon,
   conc_uM,
-  signal_wavelength
+  signal_wavelength,
+  peak_geometry = NULL
 )
 }
 \arguments{
@@ -30,6 +31,12 @@ plot_largest_peak(
 \item{signal_wavelength}{Numeric. Detection wavelength in nm, used to label the
 ε row of the metrics table. Required, because a wrong ε label silently
 misattributes an Edelhoch ε280 to the Kuipers & Gruppen ε214 formula.}
+
+\item{peak_geometry}{List from `integrate_peak_against_endpoint_baseline()`, or NULL. When
+given, the plot draws the baseline the area was actually measured against: the chord
+between the peak's two feet, the region counted above it, and a dropped line at each
+valley where a fused neighbour was cut away. Showing a shaded area against a baseline the
+viewer cannot see is how the previous integration went unquestioned for so long.}
 }
 \value{
 A ggplot object.

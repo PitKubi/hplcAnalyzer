@@ -127,7 +127,11 @@ ui <- fluidPage(
           direction  = "x",
           resetOnNew = TRUE
         )
-      )
+      ),
+      # The plot above always shows the whole acquired run and must keep doing so. At that
+      # scale the integration baseline is a few pixels tall, so it gets its own panel here
+      # rather than the run being zoomed.
+      plotOutput("integrationDetail", height = "320px")
     )
   )
 )
@@ -838,6 +842,18 @@ server <- function(input, output, session) {
 
 
   # --- interactive peak plot with brush & reset ---
+  output$integrationDetail <- renderPlot({
+    name <- basename(current_sample())
+    if (name %in% bad_samples()) return(NULL)
+    ar <- analysis_res(); req(!is.null(ar$df_hybrid))
+    if (!is.null(selected_windows()[[name]])) return(NULL)   # manual window has its own view
+    largest <- ar$peak_table %>% slice_max(height, n = 1)
+    detail <- plot_peak_integration_detail(ar$df_hybrid, ar$peak_geometry,
+                                           if (nrow(largest)) largest$area else NA_real_)
+    req(!is.null(detail))
+    detail
+  })
+
   output$peakPlot <- renderPlot({
     name <- basename(current_sample())
     # if marked bad, show a blank plot with message

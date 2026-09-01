@@ -69,6 +69,14 @@ run_hplc_analysis_thermo <- function(
     ))
   }
 
+  # 5b) Same endpoint-baseline integration as the Agilent path. A Thermo export arrives already
+  # corrected by the instrument, so `corrected` and `intensity` are the same column here.
+  reintegrated <- reintegrate_peaks_against_endpoint_baseline(
+    peak_table, df_hybrid$time, df_hybrid$intensity
+  )
+  peak_table <- reintegrated$peak_table
+  peak_geometry <- reintegrated$geometry
+
   # 6) ε (formula depends on detection wavelength) & concentration
   eps <- if (signal_wavelength == 280) {
     estimate_epsilon_280(peptide_sequence)
@@ -92,11 +100,13 @@ run_hplc_analysis_thermo <- function(
     blank_name  = NULL,
     epsilon     = eps,
     conc_uM     = conc$c_uM,
-    signal_wavelength = signal_wavelength
+    signal_wavelength = signal_wavelength,
+    peak_geometry = peak_geometry
   )
 
   # 8) return exactly the same structure as your Agilent function
   list(
+    peak_geometry    = peak_geometry,
     df_hybrid        = df_hybrid,
     peak_table       = peak_table,
     epsilon          = eps,

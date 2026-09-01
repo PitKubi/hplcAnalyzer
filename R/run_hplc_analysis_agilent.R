@@ -163,6 +163,16 @@ run_hplc_analysis_agilent <- function(
     ))
   }
 
+  # 4b) Integrate against each peak's own endpoint baseline rather than against zero after a
+  # global subtraction. The raw column is used on purpose: the chord is the baseline, so the
+  # corrected column would have a baseline taken off twice. See
+  # integrate_peak_against_endpoint_baseline() for what the global baseline was costing.
+  reintegrated <- reintegrate_peaks_against_endpoint_baseline(
+    peak_table, df_hybrid$time, df_hybrid$intensity
+  )
+  peak_table <- reintegrated$peak_table
+  peak_geometry <- reintegrated$geometry
+
   # 5) Compute ε (formula depends on detection wavelength) and concentration
   inj_ml_use <- attr(df_hybrid, "inj_vol_ml")
   if (is.null(inj_ml_use)) inj_ml_use <- inj_vol_ml
@@ -188,11 +198,13 @@ run_hplc_analysis_agilent <- function(
     if (use_hybrid_baseline) basename(blank_d_path) else NULL,
     epsilon = eps,
     conc_uM  = conc$c_uM,
-    signal_wavelength = signal_wavelength
+    signal_wavelength = signal_wavelength,
+    peak_geometry = peak_geometry
   )
 
   # 7) Return results
   list(
+    peak_geometry    = peak_geometry,
     df_hybrid        = df_hybrid,
     peak_table       = peak_table,
     epsilon          = eps,
