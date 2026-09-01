@@ -117,8 +117,6 @@ ui <- fluidPage(
       DTOutput("samplesDT"),
       tags$style(HTML("#samplesDT {font-size: 12px;}.dataTables_wrapper .dataTables_scrollBody {border: 1px solid #eee;}")),
       hr(),
-      plotOutput("rawOverlay", height = "300px"),
-      hr(),
       h4(textOutput("currentSample")),
       plotOutput(
         "peakPlot",
@@ -732,29 +730,16 @@ server <- function(input, output, session) {
   })
 
   # --- raw + baseline overlay ---
-  output$rawOverlay <- renderPlot({
-    ar <- analysis_res(); req(!is.null(ar$df_hybrid))
-    df    <- ar$df_hybrid
-    is_hyb <- all(c("raw_diff","baseline_local") %in% names(df))
-
-    if (is_hyb) {
-      ggplot(df, aes(time)) +
-        geom_line(aes(y = raw_diff),       color = "gray70") +
-        geom_line(aes(y = baseline_local), color = "blue", linetype = "dashed") +
-        geom_line(aes(y = corrected),      color = "black") +
-        labs(title = "Hybrid Baseline Correction",
-             x = "Time (min)", y = "Absorbance (mAU)") +
-        theme_minimal()
-    } else {
-      ggplot(df, aes(time)) +
-        geom_line(aes(y = intensity), color = "gray70", alpha = 0.7) +
-        geom_line(aes(y = baseline),  color = "blue",    linetype = "dashed") +
-        geom_line(aes(y = corrected), color = "black") +
-        labs(title = "ALS Baseline Correction",
-             x = "Time (min)", y = "Absorbance (mAU)") +
-        theme_minimal()
-    }
-  })
+  # The ALS overlay panel that used to sit at the top of the main panel was removed in 0.7.7.
+  # It drew the ALS baseline against the *corrected* trace, so the dashed line sat above the
+  # black one over most of the run and read as "the baseline is eating the peaks" -- an artefact
+  # of overlaying a baseline computed on the raw signal onto the signal it had already been
+  # subtracted from. Measured on real runs it lay above the corrected trace on 78.5 % of points
+  # but above the raw trace on only 4.0 %, by at most 0.31 mAU. Since 0.7.x the ALS pass only
+  # seeds peak detection -- every reported area comes from the endpoint chord drawn on the raw
+  # trace in the two panels below -- so the panel showed an intermediate step that no longer
+  # decides any number, at the cost of implying the tool was broken. Do not reinstate it without
+  # plotting the baseline against the raw trace it was fitted to.
 
   #header
   output$metricsHeader <- renderText({

@@ -9,7 +9,7 @@ the peaks, and converts the main peak area to molarity using a molar absorptivit
 from the peptide sequence. Everything runs locally, either from the R console or from a Shiny
 app aimed at bench chemists rather than R programmers.
 
-Version 0.7.6. See [NEWS.md](NEWS.md) for the version history.
+Version 0.7.7. See [NEWS.md](NEWS.md) for the version history.
 
 ![The app with a batch loaded](man/figures/app-03-sample-detail.png)
 
@@ -183,13 +183,13 @@ cd hplc_analyzer
 R CMD build .
 ```
 
-That writes `hplcAnalyzer_0.7.6.tar.gz`. Send that file. The recipient installs the CRAN
+That writes `hplcAnalyzer_0.7.7.tar.gz`. Send that file. The recipient installs the CRAN
 dependencies once and then the tarball:
 
 ```r
 install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot2",
                    "gridExtra","shiny","shinyFiles","fs","DT","tibble","xml2","magrittr"))
-install.packages("C:/path/to/hplcAnalyzer_0.7.6.tar.gz", repos = NULL, type = "source")
+install.packages("C:/path/to/hplcAnalyzer_0.7.7.tar.gz", repos = NULL, type = "source")
 ```
 
 On Windows, close and reopen R before installing over an existing version. A loaded package
@@ -263,8 +263,8 @@ In this batch, `SAMPLEWK`, `SAMPLEWWK` and `SAMPLEPEPTIDEY` quantify at both wav
 `TESTPEPTIDEK` has no 280 nm chromophore at all and returns `NA (missing eps)`. That is not a
 failure, it is the reason 214 nm is the default: only about a third of tryptic peptides carry
 Trp or Tyr. Note also how much smaller the 280 nm signal is, and how much it depends on what
-the peptide carries: on the same four injections the main peak area at 280 nm is 42.59, 110.73,
-7.09 and 0.02 mAU-min against 211.46, 421.61, 119.15 and 165.46 at 214 nm. Two tryptophans
+the peptide carries: on the same four injections the main peak area at 280 nm is 43.74, 113.94,
+7.23 and 0.38 mAU-min against 215.39, 455.38, 122.10 and 166.61 at 214 nm. Two tryptophans
 give a usable 280 nm peak; a single tyrosine gives one seventeen times smaller.
 
 **Step 5. Download the results.** **Download Results CSV** writes one row per run; the columns
@@ -557,9 +557,9 @@ The **Integration detail** panel in the app draws exactly that geometry, and
 `integrate_peak_against_endpoint_baseline()` returns it if you want to draw it yourself.
 
 Each foot is capped at eight peak widths from the apex, so the chord stays local. The global ALS
-correction still runs, for the overlay plot and for peak detection where a threshold needs a flat
-trace, but it no longer decides an area: the two baseline paths give areas within a median of
-0.1 percent of each other.
+correction still runs, to seed peak detection where a threshold needs a flat trace, but it no
+longer decides an area: the two baseline paths give areas within a median of 0.1 percent of each
+other.
 
 ### The global baseline settings
 
@@ -573,9 +573,16 @@ into the main peak falls from **2.51 mAU to 0.34**, the worst it gets above the 
 peak from **0.31 mAU to 0.02**, and the offset it leaves in the first minute from **119 mAU to
 78**. Reported areas are unchanged, because they are taken against each peak's own chord.
 
-Note that the app's overlay draws the corrected trace next to the baseline, and the baseline sits
-above **that** by however much it is subtracting. The comparison that shows whether a baseline is
-cutting into a peak is against the **raw** trace, which is what the tuner plots on its own.
+The app used to show this baseline in an overlay panel above the chromatogram, and that panel was
+removed in 0.7.7 because it was actively misleading. It drew the ALS baseline against the
+**corrected** trace, so the dashed line sat above the black one over most of the run and looked
+like a baseline eating its way through the peaks. It is not: a baseline plotted on the signal it
+has already been subtracted from is above that signal by exactly the amount it subtracted. Against
+the **raw** trace, the one it was actually fitted to, it lay above on 4.0 percent of points by at
+most 0.31 mAU. Since areas are now taken against each peak's own chord, the panel displayed an
+intermediate step that decides no reported number while implying the tool was broken, so it is
+gone. The two panels that remain both draw the raw trace with the chord that does decide the
+area.
 
 ### The blank-subtracting path is no longer used by default
 
@@ -842,7 +849,7 @@ GPL-3. Copyright Peter Kubiniok.
 If you use hplcAnalyzer, cite the software together with references 1 and 2 above:
 
 > Kubiniok, P. (2026). hplcAnalyzer: automated HPLC-UV analysis and peptide concentration
-> estimation. R package version 0.7.6.
+> estimation. R package version 0.7.7.
 
 If you report a 214 nm concentration from it, say which coefficients you used. The shipped
 `estimate_epsilon_214()` is **not** the published Kuipers and Gruppen value for tryptophan;
