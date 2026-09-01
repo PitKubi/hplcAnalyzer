@@ -95,12 +95,12 @@ RStudio is optional and changes nothing here. If you use it, install it after R.
 **2. Get the code.** Either clone it:
 
 ```bash
-git clone git@github.com:PitKubi/hplc_analyzer.git
-cd hplc_analyzer
+git clone git@github.com:PitKubi/hplcAnalyzer.git
+cd hplcAnalyzer
 ```
 
 or download the ZIP from the repository's green **Code** button and unzip it. On macOS the
-unzipped folder lands in `~/Downloads/hplc_analyzer-main`; `cd` there.
+unzipped folder lands in `~/Downloads/hplcAnalyzer-main`; `cd` there.
 
 **3. Install the package and everything it needs, in one command:**
 
@@ -135,8 +135,8 @@ dependencies ask for.
 ### From a git checkout, the short version
 
 ```bash
-git clone git@github.com:PitKubi/hplc_analyzer.git
-cd hplc_analyzer
+git clone git@github.com:PitKubi/hplcAnalyzer.git
+cd hplcAnalyzer
 Rscript install.R
 ```
 
@@ -145,7 +145,7 @@ missing, then installs the package from the working tree. It is written in base 
 machine with nothing but R on it can run it. It also works from inside R or RStudio:
 
 ```r
-setwd("/path/to/hplc_analyzer")
+setwd("/path/to/hplcAnalyzer")
 source("install.R")
 ```
 
@@ -155,7 +155,7 @@ If the repository is public, this is all it takes:
 
 ```r
 install.packages("remotes")
-remotes::install_github("PitKubi/hplc_analyzer")
+remotes::install_github("PitKubi/hplcAnalyzer")
 ```
 
 **While it is private**, that call fails with a 404 rather than a 403, because GitHub hides
@@ -164,14 +164,16 @@ scope:
 
 ```r
 install.packages("remotes")
-remotes::install_github("PitKubi/hplc_analyzer",
+remotes::install_github("PitKubi/hplcAnalyzer",
                         auth_token = Sys.getenv("GITHUB_PAT"))
 ```
 
 Put the token in `~/.Renviron` as `GITHUB_PAT=ghp_...` rather than typing it into a script.
 Never commit it.
 
-Note the repository is named `hplc_analyzer` while the package is named `hplcAnalyzer`.
+The repository was renamed from `hplc_analyzer` to `hplcAnalyzer` on 1 September 2026, so that
+the repository and the package are the same word. GitHub redirects the old address permanently,
+so anything already pointing at `PitKubi/hplc_analyzer` keeps working.
 
 ### As a source tarball
 
@@ -179,7 +181,7 @@ This is how the package currently reaches collaborators on macOS and Windows. Bu
 on any machine:
 
 ```bash
-cd hplc_analyzer
+cd hplcAnalyzer
 R CMD build .
 ```
 
