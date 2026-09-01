@@ -9,7 +9,7 @@ the peaks, and converts the main peak area to molarity using a molar absorptivit
 from the peptide sequence. Everything runs locally, either from the R console or from a Shiny
 app aimed at bench chemists rather than R programmers.
 
-Version 0.7.3. See [NEWS.md](NEWS.md) for the version history.
+Version 0.7.4. See [NEWS.md](NEWS.md) for the version history.
 
 ![The app with a batch loaded](man/figures/app-03-sample-detail.png)
 
@@ -183,13 +183,13 @@ cd hplc_analyzer
 R CMD build .
 ```
 
-That writes `hplcAnalyzer_0.7.3.tar.gz`. Send that file. The recipient installs the CRAN
+That writes `hplcAnalyzer_0.7.4.tar.gz`. Send that file. The recipient installs the CRAN
 dependencies once and then the tarball:
 
 ```r
 install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot2",
                    "gridExtra","shiny","shinyFiles","fs","DT","tibble","xml2","magrittr"))
-install.packages("C:/path/to/hplcAnalyzer_0.7.3.tar.gz", repos = NULL, type = "source")
+install.packages("C:/path/to/hplcAnalyzer_0.7.4.tar.gz", repos = NULL, type = "source")
 ```
 
 On Windows, close and reopen R before installing over an existing version. A loaded package
@@ -561,24 +561,18 @@ correction still runs, for the overlay plot and for peak detection where a thres
 trace, but it no longer decides an area: the two baseline paths give areas within a median of
 0.1 percent of each other.
 
-### The blank-subtracting path leaves an injector artefact
+### The blank-subtracting path is no longer used by default
 
-At 214 nm, when a blank is present in the folder, the app takes the blank-subtracting hybrid
-path. That path leaves a **negative excursion of about -317 mAU at 3.28 minutes**, and it is
-the same size and at the same time in every run: measured across a production batch it varies
-by less than 2 mAU. It is the blank's own injector peak, over-subtracted, and the one minute
-guard ramp in `align_subtract_then_hybrid()` does not reach it. Without a blank, the plain ALS
-path leaves **-1.6 mAU** in the same place.
+The app used to take the blank-subtracting path whenever a blank folder was present, which is
+most batches. It does not any more, and the reason is that its baseline is not a baseline. On a
+production run the piecewise fit **jumps 171 mAU between two adjacent points** and dives to -171
+at both ends of the chromatogram, where the plain ALS fit moves at most 0.8 mAU between points.
+It also over-subtracts the blank's own injector peak, leaving about -317 mAU at 3.3 min in every
+run.
 
-It does not corrupt the reported concentration, because it sits well before the analyte window
-that `min_rt_frac` opens at 30 percent of the run, and no peak is picked there. But the two
-paths do not agree: on three runs the hybrid path returned 92.9, 44.8 and 91.5 uM where ALS
-returned 88.6, 39.0 and 79.5, so a difference of 5 to 15 percent, and it is the hybrid number
-that is biased high against hand integration (see the 280 nm entry below).
-
-If a chromatogram in your batch opens with a deep dip just after the injector, that is this,
-not your sample. Removing the blank from the folder, or calling
-`run_hplc_analysis_agilent(..., use_hybrid = FALSE)`, avoids it.
+None of that is worth paying for. Since each peak is integrated against its own chord, choosing
+the blank path changes the reported area by a median of **1.6 percent**. It remains available as
+`use_hybrid = TRUE` on `run_hplc_analysis_agilent()`.
 
 **At 280 nm the blank is never subtracted, even if you ask for it.**
 `run_hplc_analysis_agilent()` computes `use_hybrid && signal_wavelength != 280`, so an explicit
@@ -832,7 +826,7 @@ GPL-3. Copyright Peter Kubiniok.
 If you use hplcAnalyzer, cite the software together with references 1 and 2 above:
 
 > Kubiniok, P. (2026). hplcAnalyzer: automated HPLC-UV analysis and peptide concentration
-> estimation. R package version 0.7.3.
+> estimation. R package version 0.7.4.
 
 If you report a 214 nm concentration from it, say which coefficients you used. The shipped
 `estimate_epsilon_214()` is **not** the published Kuipers and Gruppen value for tryptophan;

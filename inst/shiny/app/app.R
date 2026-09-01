@@ -424,7 +424,7 @@ server <- function(input, output, session) {
               sample_d_path           = sp,
               blank_d_path            = blank_sp,
               peptide_sequence        = seq_sp,
-              use_hybrid              = !is.null(blank_sp),
+              use_hybrid              = FALSE,
               min_rt_frac             = rt_window$min_frac,
               max_rt_frac             = rt_window$max_frac,
               signal_wavelength       = wl,
@@ -541,10 +541,15 @@ server <- function(input, output, session) {
 
 
 
-  use_hybrid <- reactive({
-    cb <- chosen_blank()
-    !is.null(cb) && nzchar(cb) && dir.exists(cb)
-  })
+  # The blank-subtracting path is no longer selected just because a blank is in the folder.
+  # Its piecewise baseline is discontinuous: on a production run it jumps 171 mAU between two
+  # adjacent points and dives to -171 at both ends of the chromatogram, where the plain ALS
+  # baseline moves at most 0.8 mAU between points. It also over-subtracts the blank's own
+  # injector peak, leaving about -317 mAU at 3.3 min in every run. None of that is worth paying
+  # for: since each peak is integrated against its own chord, choosing the blank path changes
+  # the reported area by a median of 1.6 percent. The argument is still there on
+  # run_hplc_analysis_agilent() for anyone who wants it.
+  use_hybrid <- reactive(FALSE)
 
   # --- store per‐sample manual windows ---
   selected_windows <- reactiveVal(list())
