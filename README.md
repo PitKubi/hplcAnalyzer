@@ -9,7 +9,7 @@ the peaks, and converts the main peak area to molarity using a molar absorptivit
 from the peptide sequence. Everything runs locally, either from the R console or from a Shiny
 app aimed at bench chemists rather than R programmers.
 
-Version 0.6.3. See [NEWS.md](NEWS.md) for the version history.
+Version 0.7.0. See [NEWS.md](NEWS.md) for the version history.
 
 ![The app with a batch loaded](man/figures/app-03-sample-detail.png)
 
@@ -183,13 +183,13 @@ cd hplc_analyzer
 R CMD build .
 ```
 
-That writes `hplcAnalyzer_0.6.3.tar.gz`. Send that file. The recipient installs the CRAN
+That writes `hplcAnalyzer_0.7.0.tar.gz`. Send that file. The recipient installs the CRAN
 dependencies once and then the tarball:
 
 ```r
 install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot2",
                    "gridExtra","shiny","shinyFiles","fs","DT","tibble","xml2","magrittr"))
-install.packages("C:/path/to/hplcAnalyzer_0.6.3.tar.gz", repos = NULL, type = "source")
+install.packages("C:/path/to/hplcAnalyzer_0.7.0.tar.gz", repos = NULL, type = "source")
 ```
 
 On Windows, close and reopen R before installing over an existing version. A loaded package
@@ -549,11 +549,17 @@ in case 1 stayed invisible until 2026.
 Each peak is integrated **against a baseline drawn between its own two feet**, not against zero
 after a global baseline has been subtracted from the whole trace.
 
-The window is found by walking outward from the apex. A dip that is still well above the local
-level is a fused neighbour rather than the end of the peak, so the walk carries on past it and
-remembers where it was; each remembered dip becomes a perpendicular drop, and only the slice
-holding the tallest apex, the analyte, is counted. Where two detected peaks meet, the boundary
-is the valley between them, so no two peaks can claim the same stretch of trace and **Area (%)**
+The window is found by walking outward from the apex, and the walk runs to **this peak's own
+foot**. It is not stopped at the valley it shares with a neighbour: that valley sits partway up
+the flank, and anchoring the chord there lifted it a median 30 mAU off the baseline, cutting
+roughly a sixth of the area off the peak. Anchoring at the true foot instead leaves the chord a
+median **3.1 mAU** above the local baseline, over 20 mAU on 2 runs of 47 rather than 32.
+
+The shared valley is still honoured, as a **bound on what gets integrated** rather than on where
+the baseline is measured. Those are two different jobs and conflating them was the single largest
+error in this code. Every valley riding on the peak and every valley shared with a neighbour cuts
+the envelope, no cut is allowed to land on the apex itself, and the slice counted is the one
+holding this peak's own apex, so no two peaks claim the same stretch of trace and **Area (%)**
 stays a meaningful ratio. The level at each foot is fitted from the ten nearest points on the
 side away from the apex, so the fit never leans on the peak. Everything above the resulting
 chord is integrated, nothing below it.
@@ -759,13 +765,11 @@ that has already been reported. Set it yourself.
 - **The hybrid baseline path can fail on individual runs.** One of 58 runs in the batch tested
   errors inside `baseline_hybrid_sm()` with `invalid 'times' argument`. The app catches it, and
   the row carries the error text rather than a number.
-- **The envelope walk is unreliable on small or crowded peaks.** Measured across 47 runs, the
-  chord sits a median 27.9 mAU above the local baseline but 105 mAU above it at the 90th
-  percentile, and on the worst run both feet land on the flanks and the chord runs diagonally
-  through the peak. The cause is that the walk is stopped at the valley between neighbouring
-  peaks and the endpoint level is then fitted at that stop point, which on a crowded run is
-  partway up a flank. Well-resolved peaks are unaffected; the chord lands within a few mAU of
-  the baseline.
+- **A peak sitting on a broad unresolved hump keeps the hump's level as its baseline.** The
+  chord lands a median 3.1 mAU above the local baseline across 47 runs, 6.2 at the 90th
+  percentile, but on two runs it is about 20 mAU high because the peak is a shoulder on a rising
+  feature and there is no flat stretch to anchor to. On one of those the cut also lands close
+  enough to the apex that only part of the peak is integrated.
 - **Integration is not adjustable from the app.** The foot walk, the valley prominence and the
   ten point endpoint fit are constants in `R/integrate_peak_endpoint_baseline.R`. A peak whose
   envelope cannot be walked silently keeps the area the detector's own trapezoid gave it.
@@ -867,7 +871,7 @@ GPL-3. Copyright Peter Kubiniok.
 If you use hplcAnalyzer, cite the software together with references 1 and 2 above:
 
 > Kubiniok, P. (2026). hplcAnalyzer: automated HPLC-UV analysis and peptide concentration
-> estimation. R package version 0.6.3.
+> estimation. R package version 0.7.0.
 
 If you report a 214 nm concentration from it, say which coefficients you used. The shipped
 `estimate_epsilon_214()` is **not** the published Kuipers and Gruppen value for tryptophan;
