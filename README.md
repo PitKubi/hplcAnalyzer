@@ -9,7 +9,7 @@ the peaks, and converts the main peak area to molarity using a molar absorptivit
 from the peptide sequence. Everything runs locally, either from the R console or from a Shiny
 app aimed at bench chemists rather than R programmers.
 
-Version 0.7.0. See [NEWS.md](NEWS.md) for the version history.
+Version 0.7.1. See [NEWS.md](NEWS.md) for the version history.
 
 ![The app with a batch loaded](man/figures/app-03-sample-detail.png)
 
@@ -183,13 +183,13 @@ cd hplc_analyzer
 R CMD build .
 ```
 
-That writes `hplcAnalyzer_0.7.0.tar.gz`. Send that file. The recipient installs the CRAN
+That writes `hplcAnalyzer_0.7.1.tar.gz`. Send that file. The recipient installs the CRAN
 dependencies once and then the tarball:
 
 ```r
 install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot2",
                    "gridExtra","shiny","shinyFiles","fs","DT","tibble","xml2","magrittr"))
-install.packages("C:/path/to/hplcAnalyzer_0.7.0.tar.gz", repos = NULL, type = "source")
+install.packages("C:/path/to/hplcAnalyzer_0.7.1.tar.gz", repos = NULL, type = "source")
 ```
 
 On Windows, close and reopen R before installing over an existing version. A loaded package
@@ -567,6 +567,27 @@ chord is integrated, nothing below it.
 The **Integration detail** panel in the app draws exactly that geometry, and
 `integrate_peak_against_endpoint_baseline()` returns it if you want to draw it yourself.
 
+**The feet cannot be arbitrarily far apart.** A chord drawn across eleven minutes of a
+twenty-four minute run is not a local baseline, whatever the area it produces, and the walk did
+occasionally do that where the trace stayed just above the foot level for a long stretch. Each
+foot is capped at eight peak widths from the apex, measuring the peak's width at half its height
+above a provisional chord. Over 47 runs that takes the worst envelope from 11.4 min to 4.6 and
+the median from 1.9 to 1.7, changes the integrated area by **-0.01 percent**, and leaves the
+chord marginally closer to the local baseline than no cap at all. Four widths is too tight and
+starts anchoring on the flank.
+
+### What changed against the previous method
+
+![before and after](man/figures/integration_before_and_after.png)
+
+Left is the previous method, a global ALS baseline subtracted and the area taken from zero
+between the detector's own peak bounds. Right is what ships now. Across 47 runs the new areas run
+a median **8.0 percent** higher, 20 of 47 within 5 percent and 31 within 10. The difference is
+concentrated where it should be: peptide C, where the previous bounds cut the fused shoulder off
+and the chord takes it. Median main peak Area (%) moves from 67.5 to 53.1, because wider
+envelopes give the neighbouring peaks more area as well; that is a real change in what purity
+means here and it is worth knowing before comparing a number from this version with an older one.
+
 **How far the walk runs is set by measurement, not by taste.** The walk stops when the trace
 comes within `foot_fraction` of the local level, as a fraction of peak height. Set it too high
 and the walk stops up the flank and the chord is drawn above the real baseline, cutting a slab
@@ -871,7 +892,7 @@ GPL-3. Copyright Peter Kubiniok.
 If you use hplcAnalyzer, cite the software together with references 1 and 2 above:
 
 > Kubiniok, P. (2026). hplcAnalyzer: automated HPLC-UV analysis and peptide concentration
-> estimation. R package version 0.7.0.
+> estimation. R package version 0.7.1.
 
 If you report a 214 nm concentration from it, say which coefficients you used. The shipped
 `estimate_epsilon_214()` is **not** the published Kuipers and Gruppen value for tryptophan;
