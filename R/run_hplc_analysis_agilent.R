@@ -3,17 +3,21 @@
 #' @param sample_d_path Path to sample .D folder.
 #' @param blank_d_path  Path to blank .D folder or NULL.
 #' @param peptide_sequence Character. Peptide one-letter code.
-#' @param sample_als_lambda Numeric. λ for global ALS baseline. Default 5.5.
-#' @param sample_als_p Numeric. p for global ALS baseline. Default 1e-4.
-#'   One global λ cannot both follow the injector disturbance and stay stiff under a peak, and the
-#'   trade is monotone. Measured over 24 runs, as λ rises from 4 to 6.5 the baseline's climb into
-#'   the main peak falls from 6.2 mAU to 0.5 while the corrected trace's offset in the first
-#'   minute rises from 13 mAU to 138. 5.5 is the knee: the climb is 0.9 mAU, essentially gone, and
-#'   beyond it the climb barely improves while the injector cost keeps rising.
+#' @param sample_als_lambda Numeric. λ for global ALS baseline. Default 4.5.
+#' @param sample_als_p Numeric. p for global ALS baseline. Default 10^-6.5.
+#'   Chosen at the instrument by driving the two sliders in
+#'   `project_workspaces/hplcanalyzer/baseline_tuner` against three test runs, rather than by
+#'   fitting a summary statistic. λ is stiffness and p is how hard the fit is pushed under the
+#'   data; the second is what keeps a baseline off a peak, and tuning λ alone cannot substitute
+#'   for it. Measured over 47 runs against the previous 5.5 and 1e-4:
 #'
-#'   Neither end of that trade changes a reported number. Areas are taken against each peak's own
-#'   chord, and the injector region sits before the analyte window that `min_rt_frac` opens. What
-#'   λ decides is what the overlay plot looks like and what peak detection thresholds against.
+#'   - climb into the main peak, above the straight line joining the baseline's own values at the
+#'     peak's feet: **2.51 mAU to 0.34**
+#'   - worst the baseline gets above the raw trace near the peak: **0.31 mAU to 0.02**
+#'   - offset in the first minute, the injector cost: **119 mAU to 78**
+#'   - reported area: **unchanged**, because areas are taken against each peak's own chord
+#'
+#'   Better on every axis at no cost, which is not what the λ-only sweeps found.
 #' @param hybrid_als_lambda Numeric. λ for piecewise ALS. Default 6.5.
 #' @param hybrid_als_p Numeric. p for piecewise ALS. Default 1e-4.
 #' @param pre_win Integer. SG window for hybrid pre-smoothing. Default 7.
@@ -37,8 +41,8 @@ run_hplc_analysis_agilent <- function(
     sample_d_path,
     blank_d_path             = NULL,
     peptide_sequence,
-    sample_als_lambda        = 5.5,
-    sample_als_p             = 1e-4,
+    sample_als_lambda        = 4.5,
+    sample_als_p             = 10^-6.5,
     use_hybrid               = FALSE,
     hybrid_als_lambda        = 6.5,
     hybrid_als_p             = 1e-4,

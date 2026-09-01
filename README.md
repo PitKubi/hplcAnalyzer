@@ -9,7 +9,7 @@ the peaks, and converts the main peak area to molarity using a molar absorptivit
 from the peptide sequence. Everything runs locally, either from the R console or from a Shiny
 app aimed at bench chemists rather than R programmers.
 
-Version 0.7.5. See [NEWS.md](NEWS.md) for the version history.
+Version 0.7.6. See [NEWS.md](NEWS.md) for the version history.
 
 ![The app with a batch loaded](man/figures/app-03-sample-detail.png)
 
@@ -183,13 +183,13 @@ cd hplc_analyzer
 R CMD build .
 ```
 
-That writes `hplcAnalyzer_0.7.5.tar.gz`. Send that file. The recipient installs the CRAN
+That writes `hplcAnalyzer_0.7.6.tar.gz`. Send that file. The recipient installs the CRAN
 dependencies once and then the tarball:
 
 ```r
 install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot2",
                    "gridExtra","shiny","shinyFiles","fs","DT","tibble","xml2","magrittr"))
-install.packages("C:/path/to/hplcAnalyzer_0.7.5.tar.gz", repos = NULL, type = "source")
+install.packages("C:/path/to/hplcAnalyzer_0.7.6.tar.gz", repos = NULL, type = "source")
 ```
 
 On Windows, close and reopen R before installing over an existing version. A loaded package
@@ -561,21 +561,21 @@ correction still runs, for the overlay plot and for peak detection where a thres
 trace, but it no longer decides an area: the two baseline paths give areas within a median of
 0.1 percent of each other.
 
-### The global baseline is stiffer than it was
+### The global baseline settings
 
-At the old `sample_als_lambda = 4.0` the fitted baseline arced up into the main peak instead of
-passing under it: on a production run it rose from about 23 mAU either side of the peak to 40
-beneath it, and measured over 24 runs it climbed a median of **6.2 mAU** above the straight line
-joining its own values at the peak's feet. At 5.5 that climb is **0.9 mAU**.
+`sample_als_lambda = 4.5` and `sample_als_p = 10^-6.5`, chosen at the instrument by driving the
+two sliders in the tuner against three test runs rather than by fitting a summary statistic.
+Lambda is stiffness and p is how hard the fit is pushed under the data; the second is what keeps
+a baseline off a peak, and tuning lambda alone cannot substitute for it.
 
-One global λ cannot both follow the injector disturbance and stay stiff under a peak, and the
-trade is monotone: from λ 4 to 6.5 the climb falls 6.2 to 0.5 mAU while the corrected trace's
-offset in the first minute rises 13 to 138. 5.5 is the knee, and past it the climb barely improves
-while the injector cost keeps rising.
+Measured over 47 runs, against a lambda-only choice of 5.5 with p at 1e-4: the baseline's climb
+into the main peak falls from **2.51 mAU to 0.34**, the worst it gets above the raw trace near the
+peak from **0.31 mAU to 0.02**, and the offset it leaves in the first minute from **119 mAU to
+78**. Reported areas are unchanged, because they are taken against each peak's own chord.
 
-Neither end of that trade changes a reported number. Areas are taken against each peak's own
-chord, and the injector region sits before the analyte window `min_rt_frac` opens. What λ decides
-is what the overlay plot looks like and what peak detection thresholds against.
+Note that the app's overlay draws the corrected trace next to the baseline, and the baseline sits
+above **that** by however much it is subtracting. The comparison that shows whether a baseline is
+cutting into a peak is against the **raw** trace, which is what the tuner plots on its own.
 
 ### The blank-subtracting path is no longer used by default
 
@@ -842,7 +842,7 @@ GPL-3. Copyright Peter Kubiniok.
 If you use hplcAnalyzer, cite the software together with references 1 and 2 above:
 
 > Kubiniok, P. (2026). hplcAnalyzer: automated HPLC-UV analysis and peptide concentration
-> estimation. R package version 0.7.5.
+> estimation. R package version 0.7.6.
 
 If you report a 214 nm concentration from it, say which coefficients you used. The shipped
 `estimate_epsilon_214()` is **not** the published Kuipers and Gruppen value for tryptophan;
