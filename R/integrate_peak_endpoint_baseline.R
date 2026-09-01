@@ -17,7 +17,13 @@
 # dip becomes a perpendicular drop, so only the slice holding the tallest apex, the analyte, is
 # integrated.
 
-FOOT_FRACTION_OF_APEX_HEIGHT <- 0.02
+# How close to the local level the trace has to come before the walk calls it the foot. Set by
+# sweeping it on six peaks and watching where the integrated area stops moving. At 0.02 the walk
+# stopped well up the flank: on one peak it put the chord at 44 mAU where the trace either side
+# of the peak sits at 32, so 13 mAU of signal was cut off across the peak's whole width. Areas
+# stop changing by 0.002, and below that nothing moves by more than 0.15 percent in total while
+# the chord settles within about 2 mAU of the local baseline.
+FOOT_FRACTION_OF_APEX_HEIGHT <- 0.002
 MIN_POINTS_BETWEEN_VALLEY_AND_APEX <- 6
 MIN_VALLEY_PROMINENCE_FRACTION <- 0.03
 
@@ -47,8 +53,9 @@ fit_baseline_level_at_edge <- function(time, signal, edge_time, apex_time, n_poi
 }
 
 walk_from_apex_to_foot <- function(signal, apex_index, step, apex_height, local_level,
-                                   stop_index = NA_integer_) {
-  foot_level <- local_level + FOOT_FRACTION_OF_APEX_HEIGHT * (apex_height - local_level)
+                                   stop_index = NA_integer_,
+                                   foot_fraction = FOOT_FRACTION_OF_APEX_HEIGHT) {
+  foot_level <- local_level + foot_fraction * (apex_height - local_level)
   prominence <- MIN_VALLEY_PROMINENCE_FRACTION * (apex_height - local_level)
   last_index <- length(signal)
   index <- apex_index
@@ -85,6 +92,9 @@ walk_from_apex_to_foot <- function(signal, apex_index, step, apex_height, local_
 #'   baseline, so a globally corrected trace would have its baseline removed twice.
 #' @param apex_time Numeric. Retention time of the peak to integrate.
 #' @param n_points Integer. Points used to fit each foot level. Default 10.
+#' @param foot_fraction Numeric. How close to the local level the trace has to come before the
+#'   walk calls it the foot, as a fraction of peak height above that level. Set by sweeping it
+#'   until the integrated area stops changing; see the default's comment.
 #' @param neighbour_apex_times Numeric. Apexes of the other detected peaks. The envelope stops
 #'   at the valley between this peak and the nearest one on each side, so two peaks can never
 #'   claim the same stretch of trace and the areas stay comparable to each other, which is what
@@ -95,7 +105,8 @@ walk_from_apex_to_foot <- function(signal, apex_index, step, apex_height, local_
 #'   peak has no usable envelope.
 #' @export
 integrate_peak_against_endpoint_baseline <- function(time, signal, apex_time, n_points = 10,
-                                                     neighbour_apex_times = numeric(0)) {
+                                                     neighbour_apex_times = numeric(0),
+                                                     foot_fraction = FOOT_FRACTION_OF_APEX_HEIGHT) {
   empty <- list(area = NA_real_, foot_start_rt = NA_real_, foot_end_rt = NA_real_,
                 foot_start_level = NA_real_, foot_end_level = NA_real_,
                 start_rt = NA_real_, end_rt = NA_real_, drop_rts = numeric(0))
@@ -117,8 +128,8 @@ integrate_peak_against_endpoint_baseline <- function(time, signal, apex_time, n_
   stop_left  <- if (length(before)) valley_between(max(before)) else NA_integer_
   stop_right <- if (length(after))  valley_between(min(after))  else NA_integer_
 
-  left <- walk_from_apex_to_foot(signal, apex_index, -1L, apex_height, local_level, stop_left)
-  right <- walk_from_apex_to_foot(signal, apex_index, +1L, apex_height, local_level, stop_right)
+  left <- walk_from_apex_to_foot(signal, apex_index, -1L, apex_height, local_level, stop_left, foot_fraction)
+  right <- walk_from_apex_to_foot(signal, apex_index, +1L, apex_height, local_level, stop_right, foot_fraction)
   if (right$foot - left$foot < 5) return(empty)
 
   foot_start_rt <- time[left$foot]; foot_end_rt <- time[right$foot]

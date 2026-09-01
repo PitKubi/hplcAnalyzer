@@ -9,7 +9,7 @@ the peaks, and converts the main peak area to molarity using a molar absorptivit
 from the peptide sequence. Everything runs locally, either from the R console or from a Shiny
 app aimed at bench chemists rather than R programmers.
 
-Version 0.6.0. See [NEWS.md](NEWS.md) for the version history.
+Version 0.6.1. See [NEWS.md](NEWS.md) for the version history.
 
 ![The app with a batch loaded](man/figures/app-03-sample-detail.png)
 
@@ -183,13 +183,13 @@ cd hplc_analyzer
 R CMD build .
 ```
 
-That writes `hplcAnalyzer_0.6.0.tar.gz`. Send that file. The recipient installs the CRAN
+That writes `hplcAnalyzer_0.6.1.tar.gz`. Send that file. The recipient installs the CRAN
 dependencies once and then the tarball:
 
 ```r
 install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot2",
                    "gridExtra","shiny","shinyFiles","fs","DT","tibble","xml2","magrittr"))
-install.packages("C:/path/to/hplcAnalyzer_0.6.0.tar.gz", repos = NULL, type = "source")
+install.packages("C:/path/to/hplcAnalyzer_0.6.1.tar.gz", repos = NULL, type = "source")
 ```
 
 On Windows, close and reopen R before installing over an existing version. A loaded package
@@ -561,6 +561,19 @@ chord is integrated, nothing below it.
 The **Integration detail** panel in the app draws exactly that geometry, and
 `integrate_peak_against_endpoint_baseline()` returns it if you want to draw it yourself.
 
+**How far the walk runs is set by measurement, not by taste.** The walk stops when the trace
+comes within `foot_fraction` of the local level, as a fraction of peak height. Set it too high
+and the walk stops up the flank and the chord is drawn above the real baseline, cutting a slab
+off the peak across its whole width. The value is chosen by integrating the same peak at a range
+of settings and finding where the area stops moving:
+
+![foot fraction sweep](man/figures/foot_fraction_sweep.png)
+
+All six settle by **0.002**, which is what ships, and nothing moves by more than 0.15 percent
+below it. At the 0.02 this started with, one peak had its chord at 44 mAU where the trace either
+side sits at 32: 13 mAU cut off along the entire peak. At 0.002 the chord sits within about
+2 mAU of the local baseline. It is exposed as `foot_fraction` if a method needs something else.
+
 **Why not a global baseline.** An ALS baseline fitted to the whole chromatogram rises under a
 peak instead of passing beneath it, and the area under that hump is lost. Measured over 47 runs
 of a production batch it cost a median **9.6 percent** of the 214 nm peak area: about 2 percent
@@ -841,7 +854,7 @@ GPL-3. Copyright Peter Kubiniok.
 If you use hplcAnalyzer, cite the software together with references 1 and 2 above:
 
 > Kubiniok, P. (2026). hplcAnalyzer: automated HPLC-UV analysis and peptide concentration
-> estimation. R package version 0.6.0.
+> estimation. R package version 0.6.1.
 
 If you report a 214 nm concentration from it, say which coefficients you used. The shipped
 `estimate_epsilon_214()` is **not** the published Kuipers and Gruppen value for tryptophan;

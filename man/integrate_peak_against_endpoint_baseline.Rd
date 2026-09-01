@@ -9,7 +9,8 @@ integrate_peak_against_endpoint_baseline(
   signal,
   apex_time,
   n_points = 10,
-  neighbour_apex_times = numeric(0)
+  neighbour_apex_times = numeric(0),
+  foot_fraction = FOOT_FRACTION_OF_APEX_HEIGHT
 )
 }
 \arguments{
@@ -24,6 +25,10 @@ baseline, so a globally corrected trace would have its baseline removed twice.}
 at the valley between this peak and the nearest one on each side, so two peaks can never
 claim the same stretch of trace and the areas stay comparable to each other, which is what
 Area (%) depends on.}
+
+\item{foot_fraction}{Numeric. How close to the local level the trace has to come before the
+walk calls it the foot, as a fraction of peak height above that level. Set by sweeping it
+until the integrated area stops changing; see the default's comment.}
 }
 \value{
 A list with `area`, the two feet `foot_start_rt`/`foot_end_rt` and their fitted
