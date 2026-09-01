@@ -37,11 +37,11 @@ install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot
 Then install the package itself, using the full path to the file you were sent:
 
 ```r
-install.packages("C:/Users/you/Downloads/hplcAnalyzer_0.6.2.tar.gz",
+install.packages("C:/Users/you/Downloads/hplcAnalyzer_0.6.3.tar.gz",
                  repos = NULL, type = "source")
 ```
 
-On macOS the path looks like `/Users/you/Downloads/hplcAnalyzer_0.6.2.tar.gz`. Use forward
+On macOS the path looks like `/Users/you/Downloads/hplcAnalyzer_0.6.3.tar.gz`. Use forward
 slashes on every platform, including Windows.
 
 ### B. You have a git checkout

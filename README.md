@@ -9,7 +9,7 @@ the peaks, and converts the main peak area to molarity using a molar absorptivit
 from the peptide sequence. Everything runs locally, either from the R console or from a Shiny
 app aimed at bench chemists rather than R programmers.
 
-Version 0.6.2. See [NEWS.md](NEWS.md) for the version history.
+Version 0.6.3. See [NEWS.md](NEWS.md) for the version history.
 
 ![The app with a batch loaded](man/figures/app-03-sample-detail.png)
 
@@ -183,13 +183,13 @@ cd hplc_analyzer
 R CMD build .
 ```
 
-That writes `hplcAnalyzer_0.6.2.tar.gz`. Send that file. The recipient installs the CRAN
+That writes `hplcAnalyzer_0.6.3.tar.gz`. Send that file. The recipient installs the CRAN
 dependencies once and then the tarball:
 
 ```r
 install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot2",
                    "gridExtra","shiny","shinyFiles","fs","DT","tibble","xml2","magrittr"))
-install.packages("C:/path/to/hplcAnalyzer_0.6.2.tar.gz", repos = NULL, type = "source")
+install.packages("C:/path/to/hplcAnalyzer_0.6.3.tar.gz", repos = NULL, type = "source")
 ```
 
 On Windows, close and reopen R before installing over an existing version. A loaded package
@@ -594,13 +594,6 @@ An earlier version of this section claimed the global baseline cost a median 9.6
 between neighbours and with the foot walk stopping far earlier, and it does not describe the
 code here. It is corrected above rather than quietly removed.
 
-![baseline check](man/figures/baseline_tuning_check.png)
-
-The orange line joins the peak's own two feet. Anything a fitted baseline does above that line
-is area taken out of the peak. On the left is what the global ALS baseline does at the settings
-this package uses for detection; on the right, a stiffer setting that does not. Neither is used
-for integration any more, which is the point.
-
 ### The blank-subtracting path leaves an injector artefact
 
 At 214 nm, when a blank is present in the folder, the app takes the blank-subtracting hybrid
@@ -874,7 +867,7 @@ GPL-3. Copyright Peter Kubiniok.
 If you use hplcAnalyzer, cite the software together with references 1 and 2 above:
 
 > Kubiniok, P. (2026). hplcAnalyzer: automated HPLC-UV analysis and peptide concentration
-> estimation. R package version 0.6.2.
+> estimation. R package version 0.6.3.
 
 If you report a 214 nm concentration from it, say which coefficients you used. The shipped
 `estimate_epsilon_214()` is **not** the published Kuipers and Gruppen value for tryptophan;
