@@ -9,7 +9,7 @@ the peaks, and converts the main peak area to molarity using a molar absorptivit
 from the peptide sequence. Everything runs locally, either from the R console or from a Shiny
 app aimed at bench chemists rather than R programmers.
 
-Version 0.7.1. See [NEWS.md](NEWS.md) for the version history.
+Version 0.7.2. See [NEWS.md](NEWS.md) for the version history.
 
 ![The app with a batch loaded](man/figures/app-03-sample-detail.png)
 
@@ -183,13 +183,13 @@ cd hplc_analyzer
 R CMD build .
 ```
 
-That writes `hplcAnalyzer_0.7.1.tar.gz`. Send that file. The recipient installs the CRAN
+That writes `hplcAnalyzer_0.7.2.tar.gz`. Send that file. The recipient installs the CRAN
 dependencies once and then the tarball:
 
 ```r
 install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot2",
                    "gridExtra","shiny","shinyFiles","fs","DT","tibble","xml2","magrittr"))
-install.packages("C:/path/to/hplcAnalyzer_0.7.1.tar.gz", repos = NULL, type = "source")
+install.packages("C:/path/to/hplcAnalyzer_0.7.2.tar.gz", repos = NULL, type = "source")
 ```
 
 On Windows, close and reopen R before installing over an existing version. A loaded package
@@ -576,6 +576,30 @@ the median from 1.9 to 1.7, changes the integrated area by **-0.01 percent**, an
 chord marginally closer to the local baseline than no cap at all. Four widths is too tight and
 starts anchoring on the flank.
 
+### Does it actually improve anything
+
+![does it improve](man/figures/does_the_integration_improve.png)
+
+**It stops the answer depending on an arbitrary processing choice.** Subtracting a blank before
+integrating used to change the reported area by a median of **15.8 percent**, and by more than 5
+percent on 53 of 57 runs. With the chord it changes it by **1.6 percent**, and by more than 5
+percent on 16. Whether a blank happened to be in the folder is a fact about the plate layout, not
+about the peptide, and it should not move the number.
+
+**It tracks the reference workbook more closely.** Those runs were quantified independently in a
+collaborator's workbook. Her reported concentration implies an area once the extinction
+coefficient and the injection volume are known, and everything is known except the dilution factor
+she entered, which is one number for the batch. So the test is whether the implied factor is
+*constant*. Before: median 5.47, relative spread 0.113. Now: median **5.10**, spread **0.100** and
+a visibly sharper peak sitting on a factor of exactly 5. Getting closer to a round number is not
+proof, but a tighter distribution is what tracking her areas more faithfully looks like.
+
+**It does not make the two wavelengths agree better**, and that is worth saying plainly. On the 24
+Trp/Tyr peptides quantified at both, the 214-to-280 ratio was a median 1.015 with an interquartile
+range of 0.087, and is now 1.008 with 0.095: better centred, very slightly wider, no real change.
+That test is blind to this: the chord recovers about the same fraction at both wavelengths, so the
+recovery cancels in the ratio.
+
 ### What changed against the previous method
 
 ![before and after](man/figures/integration_before_and_after.png)
@@ -892,7 +916,7 @@ GPL-3. Copyright Peter Kubiniok.
 If you use hplcAnalyzer, cite the software together with references 1 and 2 above:
 
 > Kubiniok, P. (2026). hplcAnalyzer: automated HPLC-UV analysis and peptide concentration
-> estimation. R package version 0.7.1.
+> estimation. R package version 0.7.2.
 
 If you report a 214 nm concentration from it, say which coefficients you used. The shipped
 `estimate_epsilon_214()` is **not** the published Kuipers and Gruppen value for tryptophan;
