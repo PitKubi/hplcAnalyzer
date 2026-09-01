@@ -47,8 +47,8 @@ slashes on every platform, including Windows.
 ### B. You have a git checkout
 
 ```bash
-git clone git@github.com:PitKubi/hplc_analyzer.git
-cd hplc_analyzer
+git clone git@github.com:PitKubi/hplcAnalyzer.git
+cd hplcAnalyzer
 Rscript install.R
 ```
 
@@ -56,7 +56,7 @@ Rscript install.R
 From inside R or RStudio, the same thing:
 
 ```r
-setwd("/path/to/hplc_analyzer")
+setwd("/path/to/hplcAnalyzer")
 source("install.R")
 ```
 
@@ -67,7 +67,7 @@ scope. Put `GITHUB_PAT=ghp_...` in your `~/.Renviron` file, restart R, then:
 
 ```r
 install.packages("remotes")
-remotes::install_github("PitKubi/hplc_analyzer", auth_token = Sys.getenv("GITHUB_PAT"))
+remotes::install_github("PitKubi/hplcAnalyzer", auth_token = Sys.getenv("GITHUB_PAT"))
 ```
 
 Without a token, GitHub answers 404 and the install fails with a confusing "not found".
@@ -141,7 +141,7 @@ selected wavelength. At 280 nm that means no Trp and no Tyr, and no concentratio
 computed at all. The `Status` column in the results CSV says which.
 
 **Something else**
-The repository issue tracker is at https://github.com/PitKubi/hplc_analyzer/issues
+The repository issue tracker is at https://github.com/PitKubi/hplcAnalyzer/issues
 (private; you need access).
 
 ## Uninstalling
