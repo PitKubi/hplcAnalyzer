@@ -37,12 +37,21 @@ install.packages(c("chromConverter","dplyr","baseline","signal","pracma","ggplot
 Then install the package itself, using the full path to the file you were sent:
 
 ```r
-install.packages("C:/Users/you/Downloads/hplcAnalyzer_0.7.6.tar.gz",
+install.packages("C:/Users/you/Downloads/hplcAnalyzer_0.7.8.tar.gz",
                  repos = NULL, type = "source")
 ```
 
-On macOS the path looks like `/Users/you/Downloads/hplcAnalyzer_0.7.6.tar.gz`. Use forward
+On macOS the path looks like `/Users/you/Downloads/hplcAnalyzer_0.7.8.tar.gz`. Use forward
 slashes on every platform, including Windows.
+
+**Check the file name on your own disk before running that line.** `ls ~/Downloads` on macOS,
+`dir %USERPROFILE%\Downloads` on Windows. If the version in the command does not match the file
+you actually have, `install.packages` reports "non-zero exit status" rather than "file not
+found", which sends people hunting for a build problem that is not there. This has cost an hour
+once already.
+
+Note that `install.R` is **not** inside the tarball. It ships with the git checkout only, so
+route B below is the one that uses it.
 
 ### B. You have a git checkout
 
@@ -62,15 +71,16 @@ source("install.R")
 
 ### C. Straight from GitHub
 
-While the repository is private, this needs a GitHub personal access token with the `repo`
-scope. Put `GITHUB_PAT=ghp_...` in your `~/.Renviron` file, restart R, then:
+The repository is public, so this is the shortest route and the one to prefer. It needs no
+files to be moved around and no version number to be typed correctly:
 
 ```r
 install.packages("remotes")
-remotes::install_github("PitKubi/hplcAnalyzer", auth_token = Sys.getenv("GITHUB_PAT"))
+remotes::install_github("PitKubi/hplcAnalyzer")
 ```
 
-Without a token, GitHub answers 404 and the install fails with a confusing "not found".
+It fetches dependencies as it goes. `PitKubi/hplc_analyzer`, the repository's old name, still
+works through a permanent redirect.
 
 ## Step 4: upgrading from an earlier version
 
@@ -142,7 +152,6 @@ computed at all. The `Status` column in the results CSV says which.
 
 **Something else**
 The repository issue tracker is at https://github.com/PitKubi/hplcAnalyzer/issues
-(private; you need access).
 
 ## Uninstalling
 
